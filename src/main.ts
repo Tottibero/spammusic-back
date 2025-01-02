@@ -10,7 +10,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://spammusic.netlify.app/login',
+      'https://spammusic.netlify.app',
     ], // Especifica los dominios permitidos
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos permitidos
     credentials: true, // Si necesitas enviar cookies
