@@ -7,7 +7,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'], // Especifica los dominios permitidos
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://spammusic.netlify.app/login',
+    ], // Especifica los dominios permitidos
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos permitidos
     credentials: true, // Si necesitas enviar cookies
   });
