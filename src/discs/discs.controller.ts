@@ -26,6 +26,12 @@ export class DiscsController {
     return this.dishesService.create(createDiscDto);
   }
 
+  @Get('date')
+  @Auth()
+  findAllByDate(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
+    return this.dishesService.findAllByDate(paginationDto, user);
+  }
+
   @Get()
   @Auth()
   findAll(@Query() paginationDto: PaginationDto, @GetUser() user: User) {

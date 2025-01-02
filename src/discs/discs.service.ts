@@ -49,7 +49,8 @@ export class DiscsService {
       )
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC'); // Cambia a 'ASC' si quieres orden ascendente
+      .orderBy('disc.releaseDate', 'DESC') // Cambia a 'ASC' si quieres orden ascendente
+      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por name en orden ascendente
 
     const [discs, totalItems] = await queryBuilder.getManyAndCount();
 
@@ -65,6 +66,59 @@ export class DiscsService {
         ...disc,
         userRate: disc.rates.length > 0 ? disc.rates[0] : null, // Devuelve la votación del usuario o null si no existe
       })),
+    };
+  }
+
+  async findAllByDate(paginationDto: PaginationDto, user: User) {
+    const { limit = 10, offset = 0 } = paginationDto;
+
+    const userId = user.id;
+
+    const queryBuilder = this.discRepository
+      .createQueryBuilder('disc')
+      .leftJoinAndSelect('disc.artist', 'artist') // Incluye la relación de artista
+      .leftJoinAndSelect('disc.genre', 'genre') // Incluye la relación de género
+      .leftJoinAndSelect(
+        'disc.rates',
+        'rate',
+        'rate.userId = :userId', // Filtro para calificaciones del usuario específico
+        { userId },
+      )
+      .take(limit)
+      .skip(offset)
+      .orderBy('disc.releaseDate', 'DESC') // Cambia a 'ASC' si quieres orden ascendente
+      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por name en orden ascendente
+
+    const [discs, totalItems] = await queryBuilder.getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+    const currentPage = Math.floor(offset / limit) + 1;
+
+    // Agrupar discos por fechas de lanzamiento
+    const groupedDiscs = discs.reduce((acc, disc) => {
+      const dateKey = new Date(disc.releaseDate).toISOString().split('T')[0]; // Mantén solo la fecha
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push({
+        ...disc,
+        userRate: disc.rates.length > 0 ? disc.rates[0] : null, // Devuelve la votación del usuario o null si no existe
+      });
+      return acc;
+    }, {});
+
+    // Convertir el objeto agrupado en un array de objetos para mejor legibilidad
+    const groupedArray = Object.keys(groupedDiscs).map((releaseDate) => ({
+      releaseDate,
+      discs: groupedDiscs[releaseDate],
+    }));
+
+    return {
+      totalItems,
+      totalPages,
+      currentPage,
+      limit,
+      data: groupedArray,
     };
   }
 
