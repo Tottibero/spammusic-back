@@ -59,7 +59,9 @@ export class ScrapingService {
         continue;
       }
 
-      const [artistName, discInfo] = albumLine.split(' – ');
+      const normalizedAlbumLine = albumLine.replace(' - ', ' – ');
+
+      const [artistName, discInfo] = normalizedAlbumLine.split(' – ');
       if (!artistName || !discInfo) {
         this.log(`Unexpected format: ${albumLine}`);
         continue;
@@ -104,7 +106,7 @@ export class ScrapingService {
         );
       } else {
         this.log(
-          `Already exists: Artist "${artistName}" => Disc "${discName}"`
+          `Already exists: Artist "${artistName}" => Disc "${discName}"`,
         );
       }
     }
