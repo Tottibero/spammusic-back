@@ -37,6 +37,8 @@ export class DiscsService {
 
     const userId = user.id;
 
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoinAndSelect('disc.artist', 'artist') // Asegúrate de incluir la relación de artista
@@ -47,6 +49,7 @@ export class DiscsService {
         'rate.userId = :userId', // Filtro para las calificaciones del usuario específico
         { userId },
       )
+      .where('disc.releaseDate <= :today', { today })
       .take(limit)
       .skip(offset)
       .orderBy('disc.releaseDate', 'DESC') // Cambia a 'ASC' si quieres orden ascendente
@@ -86,7 +89,7 @@ export class DiscsService {
       )
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Cambia a 'ASC' si quieres orden ascendente
+      .orderBy('disc.releaseDate', 'ASC') // Cambia a 'ASC' si quieres orden ascendente
       .addOrderBy('artist.name', 'ASC'); // Luego ordenar por name en orden ascendente
 
     const [discs, totalItems] = await queryBuilder.getManyAndCount();
