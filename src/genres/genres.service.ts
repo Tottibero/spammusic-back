@@ -31,6 +31,29 @@ export class GenresService {
     }
   }
 
+  async bulkCreate(input: any) {
+    const { genres } = input;
+    console.log('genres', genres);
+    if (!Array.isArray(genres)) {
+      throw new BadRequestException('Input must be an array of strings');
+    }
+    try {
+      const genreEntities = genres.map((genreName) =>
+        this.unitRepository.create({ name: genreName }),
+      );
+      await this.unitRepository.save(genreEntities);
+      this.logger.log(
+        `${genres.length} genres have been successfully created.`,
+      );
+      return {
+        message: `${genres.length} genres have been successfully created.`,
+        data: genreEntities,
+      };
+    } catch (error) {
+      this.handleDbExceptions(error);
+    }
+  }
+
   async findAll(paginationDto: PaginationDto) {
     const { limit = 10, offset = 0 } = paginationDto;
 

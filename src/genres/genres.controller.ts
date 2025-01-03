@@ -23,6 +23,12 @@ export class GenresController {
     return this.unitsService.create(createGenreDto);
   }
 
+  @Post('bultCreateGenre')
+  bulkCreate(@Body() createGenresArray: string[]) {
+    console.log('bulkCreateGenres', createGenresArray);
+    return this.unitsService.bulkCreate(createGenresArray);
+  }
+
   @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.unitsService.findAll(paginationDto);
