@@ -7,10 +7,10 @@ export class Rate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('decimal', { precision: 3, scale: 2, nullable: true })
+  @Column('decimal', { precision: 4, scale: 2, nullable: true })
   rate: number;
 
-  @Column('decimal', { precision: 3, scale: 2, nullable: true })
+  @Column('decimal', { precision: 4, scale: 2, nullable: true })
   cover: number;
 
   @ManyToOne(() => User, (user) => user.rate, { eager: true })
