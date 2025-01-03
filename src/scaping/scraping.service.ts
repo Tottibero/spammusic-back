@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import * as puppeteer from 'puppeteer-core';
-import chromium from 'chrome-aws-lambda';
+import * as puppeteer from 'puppeteer';
 import * as fs from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -36,26 +35,11 @@ export class ScrapingService {
   }
 
   /**
-   * Lanza el navegador utilizando chrome-aws-lambda y puppeteer-core.
-   */
-  private async launchBrowser() {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
-    });
-
-    return browser;
-  }
-
-  /**
    * Scraping Boolintunes
    */
   async scrapeBoolintunes(month: string, day?: number) {
     this.log(`Iniciando scraping de Boolintunes para ${month} ${day || ''}...`);
-
-    const browser = await this.launchBrowser();
+    const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
     try {
@@ -136,7 +120,7 @@ export class ScrapingService {
       `Iniciando scraping de HeavyMusicHQ para ${month}${day ? ' ' + day : ''}...`,
     );
 
-    const browser = await this.launchBrowser();
+    const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
     try {
