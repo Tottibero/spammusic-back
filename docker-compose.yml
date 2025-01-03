@@ -19,10 +19,10 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DB_HOST=db
-      DB_PORT=5432
-      DB_USER=postgres
-      DB_PASSWORD=${DB_PASSWORD}
-      DB_NAME=${DB_NAME}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
     depends_on:
       - db
