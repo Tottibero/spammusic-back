@@ -40,8 +40,7 @@ export class ScrapingService {
   async scrapeBoolintunes(month: string, day?: number) {
     this.log(`Iniciando scraping de Boolintunes para ${month} ${day || ''}...`);
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: process.env.CHROME_PATH,
+      args: ['--no-sandbox'],
     });
 
     const page = await browser.newPage();
