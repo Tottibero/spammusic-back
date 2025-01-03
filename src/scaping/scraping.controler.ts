@@ -2,44 +2,30 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { ScrapingService } from './scraping.service';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles';
-import { BoolintunesDto, HeavyMusicHQDto } from './dtos/scaping.dto';
 
 @Controller('scraping')
 @Auth(ValidRoles.admin, ValidRoles.superUser)
 export class ScrapingController {
   constructor(private readonly scrapingService: ScrapingService) {}
 
-  @Post('/boolintunes')
-  async scrapeBoolintunes(@Body() body: BoolintunesDto) {
-    const { month, day } = body;
-    if (!month) {
-      throw new BadRequestException('Month parameter is required');
+  @Post('/process-manual-data')
+  async processManualData(@Body() body: { date: string; albums: string[] }) {
+    const { date, albums } = body;
+
+    if (!date) {
+      throw new BadRequestException('Date parameter is required');
     }
 
-    const data = await this.scrapingService.scrapeBoolintunes(month, day);
-
-    return {
-      message: 'Scraped data retrieved successfully',
-      data,
-    };
-  }
-
-  @Post('/heavymusichq')
-  async getHeavyMusicHQReleases(@Body() body: HeavyMusicHQDto) {
-    const { month, day } = body;
-    if (!month) {
-      throw new BadRequestException('Month parameter is required');
+    if (!albums || !Array.isArray(albums) || albums.length === 0) {
+      throw new BadRequestException(
+        'Albums parameter must be a non-empty array',
+      );
     }
 
-    console.log('body: ' + JSON.stringify(body));
-    const data = await this.scrapingService.scrapeHeavyMusicHQAndSave(
-      month,
-      day,
-      true,
-    );
+    const data = await this.scrapingService.processManualData(date, albums);
 
     return {
-      message: 'Scraped data retrieved successfully',
+      message: 'Data processed successfully',
       data,
     };
   }
