@@ -9,6 +9,9 @@ export class Genre {
   @Column('varchar', { length: 50 })
   name: string;
 
+  @Column('varchar', { nullable: true })
+  color: string;
+
   @OneToMany(() => Disc, (disc) => disc.genre)
   disc: Disc[];
 }

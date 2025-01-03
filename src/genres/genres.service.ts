@@ -31,16 +31,20 @@ export class GenresService {
     }
   }
 
-  async bulkCreate(input: any) {
-    const { genres } = input;
-    console.log('genres', genres);
+  async bulkCreate(payload: { genres: { name: string; color: string }[] }) {
+    const { genres } = payload;
+
     if (!Array.isArray(genres)) {
-      throw new BadRequestException('Input must be an array of strings');
-    }
-    try {
-      const genreEntities = genres.map((genreName) =>
-        this.unitRepository.create({ name: genreName }),
+      throw new BadRequestException(
+        'The genres property must be an array of objects with name and color properties',
       );
+    }
+
+    try {
+      const genreEntities = genres.map((genre) =>
+        this.unitRepository.create({ name: genre.name, color: genre.color }),
+      );
+
       await this.unitRepository.save(genreEntities);
       this.logger.log(
         `${genres.length} genres have been successfully created.`,
