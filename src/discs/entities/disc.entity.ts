@@ -38,7 +38,7 @@ export class Disc {
   @ManyToOne(() => Artist, (artist) => artist.disc, { eager: true })
   artist: Artist;
 
-  @ManyToOne(() => Genre, (genre) => genre.disc)
+  @ManyToOne(() => Genre, (genre) => genre.disc, { eager: true })
   genre: Genre;
 
   @OneToMany(() => Rate, (rate) => rate.disc)
