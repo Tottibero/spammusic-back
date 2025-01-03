@@ -1,17 +1,22 @@
 FROM node:18
 
-# Establecer el directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copiar package.json e instalar dependencias
+# Copia los archivos necesarios
 COPY package*.json ./
+
+# Instala las dependencias
 RUN npm install
 
-# Copiar el código fuente y el archivo .env
+# Copia todo el proyecto
 COPY . .
 
-# Exponer el puerto
+# Construye la aplicación
+RUN npm run build
+
+# Expone el puerto
 EXPOSE 3000
 
-# Ejecutar la aplicación
+# Comando para ejecutar la aplicación
 CMD ["npm", "run", "start:prod"]
