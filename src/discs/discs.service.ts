@@ -8,7 +8,7 @@ import {
 import { CreateDiscDto } from './dto/create-discs.dto';
 import { UpdateDiscDto } from './dto/update-discs.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 import { Disc } from './entities/disc.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
@@ -37,25 +37,48 @@ export class DiscsService {
 
     const userId = user.id;
 
-    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const today = new Date(); // Usar el objeto Date directamente
 
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
-      .leftJoinAndSelect('disc.artist', 'artist') // Asegúrate de incluir la relación de artista
-      .leftJoinAndSelect('disc.genre', 'genre') // Asegúrate de incluir la relación de género
+      .leftJoinAndSelect('disc.artist', 'artist') // Incluye la relación de artista
+      .leftJoinAndSelect('disc.genre', 'genre') // Incluye la relación de género
       .leftJoinAndSelect(
         'disc.rates',
         'rate',
         'rate.userId = :userId', // Filtro para las calificaciones del usuario específico
         { userId },
       )
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.rate)', 'averageRate')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageRate') // Alias debe ser "averageRate"
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.cover)', 'averageCover')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageCover') // Media de las calificaciones de cover
       .where('disc.releaseDate <= :today', { today })
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Cambia a 'ASC' si quieres orden ascendente
-      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por name en orden ascendente
+      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento (descendente)
+      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por nombre del artista (ascendente)
 
-    const [discs, totalItems] = await queryBuilder.getManyAndCount();
+    const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
+    // Mapea los valores crudos de averageRate y averageCover a las entidades
+    const processedDiscs = discs.map((disc, index) => ({
+      ...disc,
+      userRate: disc.rates.length > 0 ? disc.rates[0] : null,
+      averageRate: parseFloat(raw[index].averageRate) || null, // Agrega averageRate
+      averageCover: parseFloat(raw[index].averageCover) || null, // Agrega averageCover
+    }));
+
+    const totalItems = await this.discRepository.count({
+      where: { releaseDate: LessThanOrEqual(today) },
+    });
 
     const totalPages = Math.ceil(totalItems / limit);
     const currentPage = Math.floor(offset / limit) + 1;
@@ -65,10 +88,7 @@ export class DiscsService {
       totalPages,
       currentPage,
       limit,
-      data: discs.map((disc) => ({
-        ...disc,
-        userRate: disc.rates.length > 0 ? disc.rates[0] : null, // Devuelve la votación del usuario o null si no existe
-      })),
+      data: processedDiscs,
     };
   }
 
