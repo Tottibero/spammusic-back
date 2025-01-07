@@ -49,4 +49,9 @@ export class RatesController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.ratesService.remove(id);
   }
+
+  @Get('/disc/:discId')
+  async findRatesByDisc(@Param('discId') discId: string) {
+    return this.ratesService.findRatesByDisc(discId);
+  }
 }

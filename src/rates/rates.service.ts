@@ -112,4 +112,27 @@ export class RatesService {
     this.logger.error(error);
     throw new InternalServerErrorException('An unexpected error occurred');
   }
+
+  async findRatesByDisc(discId: string) {
+    try {
+      // Verificamos si el disco existe
+      const disc = await this.rateRepository.manager.findOne(Disc, {
+        where: { id: discId },
+      });
+
+      if (!disc) {
+        throw new NotFoundException(`Disc with id ${discId} not found`);
+      }
+
+      // Obtenemos todos los rates asociados al disco
+      const rates = await this.rateRepository.find({
+        where: { disc: { id: discId } },
+        relations: ['user'], // Incluye los usuarios en la consulta
+      });
+
+      return rates;
+    } catch (error) {
+      this.handleDbExceptions(error);
+    }
+  }
 }
