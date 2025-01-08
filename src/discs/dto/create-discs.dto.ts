@@ -38,4 +38,7 @@ export class CreateDiscDto {
   @IsUUID('4')
   @IsOptional()
   genreId?: string;
+
+  @IsOptional()
+  releaseDate?: Date;
 }
