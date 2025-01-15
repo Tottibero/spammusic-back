@@ -8,7 +8,7 @@ import {
 import { CreateDiscDto } from './dto/create-discs.dto';
 import { UpdateDiscDto } from './dto/update-discs.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { Between, LessThanOrEqual, Repository } from 'typeorm';
 import { Disc } from './entities/disc.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
@@ -32,12 +32,20 @@ export class DiscsService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto, user: User) {
+  async findAll(paginationDto: PaginationDto, user: User, month?: number) {
     const { limit = 10, offset = 0 } = paginationDto;
-
     const userId = user.id;
 
-    const today = new Date(); // Usar el objeto Date directamente
+    const today = new Date();
+
+    // Calcula el rango de fechas si se especifica el mes
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    if (month) {
+      const year = today.getFullYear(); // Puedes ajustar esto si necesitas un año específico
+      startDate = new Date(year, month - 1, 1); // Primer día del mes
+      endDate = new Date(year, month, 0); // Último día del mes
+    }
 
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
@@ -61,7 +69,20 @@ export class DiscsService {
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
       }, 'averageCover') // Media de las calificaciones de cover
-      .where('disc.releaseDate <= :today', { today })
+      .where('disc.releaseDate <= :today', { today });
+
+    // Aplica el filtro de mes si está definido
+    if (startDate && endDate) {
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        {
+          startDate,
+          endDate,
+        },
+      );
+    }
+
+    queryBuilder
       .take(limit)
       .skip(offset)
       .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento (descendente)
@@ -77,7 +98,13 @@ export class DiscsService {
     }));
 
     const totalItems = await this.discRepository.count({
-      where: { releaseDate: LessThanOrEqual(today) },
+      where: month
+        ? {
+            releaseDate: Between(startDate, endDate),
+          }
+        : {
+            releaseDate: LessThanOrEqual(today),
+          },
     });
 
     const totalPages = Math.ceil(totalItems / limit);
