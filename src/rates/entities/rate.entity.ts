@@ -16,6 +16,6 @@ export class Rate {
   @ManyToOne(() => User, (user) => user.rate, { eager: true })
   user: User;
 
-  @ManyToOne(() => Disc, (disc) => disc.rates)
+  @ManyToOne(() => Disc, (disc) => disc.rates, { onDelete: 'CASCADE' })
   disc: Disc;
 }
