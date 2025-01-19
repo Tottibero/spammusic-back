@@ -9,3 +9,9 @@
 ```
 docker-compose up -d
 ```
+
+4. Subir a git 
+
+```
+git push heroku main
+```
