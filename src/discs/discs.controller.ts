@@ -19,17 +19,23 @@ import { User } from 'src/auth/entities/user.entity';
 
 @Controller('discs')
 export class DiscsController {
-  constructor(private readonly dishesService: DiscsService) {}
+  constructor(private readonly discsServices: DiscsService) {}
 
   @Post()
   create(@Body() createDiscDto: CreateDiscDto) {
-    return this.dishesService.create(createDiscDto);
+    return this.discsServices.create(createDiscDto);
   }
 
   @Get('date')
   @Auth()
   findAllByDate(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
-    return this.dishesService.findAllByDate(paginationDto, user);
+    return this.discsServices.findAllByDate(paginationDto, user);
+  }
+
+  @Auth()
+  @Get('pepe')
+  findTopRatedOrFeatured(@GetUser() user: User) {
+    return this.discsServices.findTopRatedOrFeaturedAndStats(user);
   }
 
   @Get()
@@ -39,12 +45,12 @@ export class DiscsController {
     @GetUser() user: User,
     @Query('month') month?: number, // Nuevo parámetro de consulta para el mes
   ) {
-    return this.dishesService.findAll(paginationDto, user, month);
+    return this.discsServices.findAll(paginationDto, user, month);
   }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.dishesService.findOne(id);
+    return this.discsServices.findOne(id);
   }
 
   @Patch(':id')
@@ -52,11 +58,11 @@ export class DiscsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDiscDto: UpdateDiscDto,
   ) {
-    return this.dishesService.update(id, updateDiscDto);
+    return this.discsServices.update(id, updateDiscDto);
   }
 
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.dishesService.remove(id);
+    return this.discsServices.remove(id);
   }
 }

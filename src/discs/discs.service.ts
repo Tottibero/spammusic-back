@@ -221,6 +221,69 @@ export class DiscsService {
     return { message: `Disc with id ${id} has been removed` };
   }
 
+  async findTopRatedOrFeaturedAndStats(user: User): Promise<{
+    discs: Disc[];
+    totalDiscs: number;
+    totalVotes: number;
+  }> {
+    const userId = user.id; // Obtener el ID del usuario para personalizar la consulta
+
+    const query = `
+      SELECT 
+        d.*, 
+        g.name AS "genreName", -- Nombre del género
+        g.color AS "genreColor", -- Color del género (si existe en tu modelo)
+        (SELECT COALESCE(AVG(r.rate), 0) FROM rate r WHERE r."discId" = d.id) AS "averageRate",
+        (SELECT COALESCE(AVG(r.cover), 0) FROM rate r WHERE r."discId" = d.id) AS "averageCover",
+        (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
+        (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
+        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover"
+      FROM disc d
+      LEFT JOIN artist a ON d."artistId" = a.id
+      LEFT JOIN genre g ON d."genreId" = g.id
+      ORDER BY d.featured DESC, "averageRate" DESC 
+      LIMIT 8;
+    `;
+
+    // Ejecutar consulta directa pasando el ID del usuario como parámetro
+    const topRatedDiscs = await this.discRepository.query(query, [userId]);
+
+    // Opcional: Consulta para el total de discos
+    const totalDiscs = await this.discRepository.count();
+
+    // Opcional: Consulta para el total de votos
+    const totalVotes = await this.discRepository
+      .createQueryBuilder('disc')
+      .leftJoin('disc.rates', 'rates')
+      .select('COUNT(rates.id)', 'totalVotes')
+      .getRawOne()
+      .then((result) => parseInt(result.totalVotes, 10) || 0);
+
+    // Transformar los resultados en objetos compatibles con el componente
+    const processedDiscs = topRatedDiscs.map((disc) => ({
+      ...disc,
+      genre: {
+        name: disc.genreName, // Incluye el nombre del género
+        color: disc.genreColor, // Incluye el color del género (si es aplicable)
+      },
+      userRate: disc.userRateId
+        ? {
+            id: disc.userRateId,
+            rate: parseFloat(disc.userRate) || null,
+            cover: parseFloat(disc.userCover) || null,
+          }
+        : null,
+      averageRate: parseFloat(disc.averageRate) || null,
+      averageCover: parseFloat(disc.averageCover) || null,
+    }));
+
+    return {
+      discs: processedDiscs,
+      totalDiscs,
+      totalVotes,
+    };
+  }
+
   private handleDbExceptions(error: any) {
     if (error.code === '23505') throw new BadRequestException(error.detail);
     this.logger.error(error);

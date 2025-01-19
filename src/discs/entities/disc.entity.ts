@@ -27,13 +27,16 @@ export class Disc {
   verified: boolean = false;
 
   @Column('boolean', { nullable: true })
-  EP: boolean = false;
+  ep: boolean = false;
 
   @Column('varchar', { length: 255, nullable: true })
   link: string;
 
   @Column({ type: 'date', nullable: true })
   releaseDate: Date | null;
+
+  @Column('boolean', { nullable: true })
+  featured: boolean = false;
 
   @ManyToOne(() => Artist, (artist) => artist.disc, { eager: true })
   artist: Artist;

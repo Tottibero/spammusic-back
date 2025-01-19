@@ -41,4 +41,10 @@ export class CreateDiscDto {
 
   @IsOptional()
   releaseDate?: Date;
+
+  @IsOptional()
+  ep?: boolean;
+
+  @IsOptional()
+  featured?: boolean;
 }
