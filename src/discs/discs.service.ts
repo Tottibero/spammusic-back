@@ -32,8 +32,8 @@ export class DiscsService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto, user: User, month?: number) {
-    const { limit = 10, offset = 0, query } = paginationDto;
+  async findAll(paginationDto: PaginationDto, user: User) {
+    const { limit = 10, offset = 0, query, dateRange } = paginationDto;
     const userId = user.id;
 
     const today = new Date();
@@ -41,10 +41,8 @@ export class DiscsService {
     // Calcula el rango de fechas si se especifica el mes
     let startDate: Date | undefined;
     let endDate: Date | undefined;
-    if (month) {
-      const year = today.getFullYear(); // Puedes ajustar esto si necesitas un año específico
-      startDate = new Date(year, month - 1, 1); // Primer día del mes
-      endDate = new Date(year, month, 0); // Último día del mes
+    if (dateRange && dateRange.length === 2) {
+      [startDate, endDate] = dateRange; // Extrae las fechas directamente del array
     }
 
     const queryBuilder = this.discRepository
