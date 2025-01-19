@@ -33,7 +33,7 @@ export class DiscsService {
   }
 
   async findAll(paginationDto: PaginationDto, user: User, month?: number) {
-    const { limit = 10, offset = 0 } = paginationDto;
+    const { limit = 10, offset = 0, query } = paginationDto;
     const userId = user.id;
 
     const today = new Date();
@@ -82,6 +82,14 @@ export class DiscsService {
       );
     }
 
+    if (query) {
+      const search = `%${query}%`;
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
     queryBuilder
       .take(limit)
       .skip(offset)
@@ -97,16 +105,31 @@ export class DiscsService {
       averageCover: parseFloat(raw[index].averageCover) || null, // Agrega averageCover
     }));
 
-    const totalItems = await this.discRepository.count({
-      where: month
-        ? {
-            releaseDate: Between(startDate, endDate),
-          }
-        : {
-            releaseDate: LessThanOrEqual(today),
-          },
-    });
+    const totalItemsQueryBuilder = this.discRepository
+      .createQueryBuilder('disc')
+      .leftJoin('disc.artist', 'artist') // Asegúrate de incluir las mismas uniones
+      .leftJoin('disc.genre', 'genre') // Incluye también otras relaciones si se usan en los filtros
+      .where('disc.releaseDate <= :today', { today });
 
+    if (startDate && endDate) {
+      totalItemsQueryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        {
+          startDate,
+          endDate,
+        },
+      );
+    }
+
+    if (query) {
+      const search = `%${query}%`;
+      totalItemsQueryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
+    const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);
     const currentPage = Math.floor(offset / limit) + 1;
 
@@ -120,7 +143,7 @@ export class DiscsService {
   }
 
   async findAllByDate(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0 } = paginationDto;
+    const { limit = 10, offset = 0, query } = paginationDto;
 
     const userId = user.id;
 
@@ -133,7 +156,20 @@ export class DiscsService {
         'rate',
         'rate.userId = :userId', // Filtro para calificaciones del usuario específico
         { userId },
-      )
+      );
+
+    console.log('query', query);
+
+    if (query) {
+      console.log('query', query);
+      const search = `%${query}%`;
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
+    queryBuilder
       .take(limit)
       .skip(offset)
       .orderBy('disc.releaseDate', 'ASC') // Cambia a 'ASC' si quieres orden ascendente

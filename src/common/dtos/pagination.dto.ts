@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsOptional, IsPositive, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class PaginationDto {
   @IsOptional()
@@ -10,4 +16,12 @@ export class PaginationDto {
   @IsOptional()
   @Type(() => Number)
   offset?: number;
+
+  @IsOptional()
+  @IsString()
+  query?: string; // Permitir el parámetro `query` como opcional
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  week?: number; // Parámetro `week` opcional para el filtro de semanas
 }

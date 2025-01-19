@@ -40,12 +40,8 @@ export class DiscsController {
 
   @Get()
   @Auth()
-  findAll(
-    @Query() paginationDto: PaginationDto,
-    @GetUser() user: User,
-    @Query('month') month?: number, // Nuevo parámetro de consulta para el mes
-  ) {
-    return this.discsServices.findAll(paginationDto, user, month);
+  findAll(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
+    return this.discsServices.findAll(paginationDto, user);
   }
 
   @Get(':id')
