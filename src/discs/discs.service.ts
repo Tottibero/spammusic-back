@@ -141,7 +141,7 @@ export class DiscsService {
   }
 
   async findAllByDate(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange } = paginationDto;
 
     const userId = user.id;
 
@@ -164,6 +164,17 @@ export class DiscsService {
       queryBuilder.andWhere(
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
+      );
+    }
+
+    if (dateRange && dateRange.length === 2) {
+      const [startDate, endDate] = dateRange;
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        {
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+        },
       );
     }
 
