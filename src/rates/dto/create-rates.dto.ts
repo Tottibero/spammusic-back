@@ -12,7 +12,7 @@ export class CreateRateDto {
   @ValidateIf((o) => o.rate !== null && o.rate !== undefined)
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(1)
+  @Min(0)
   @Max(10) // El valor 10 queda permitido
   rate: number;
 
@@ -20,7 +20,7 @@ export class CreateRateDto {
   @ValidateIf((o) => o.rate !== null && o.rate !== undefined)
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(1)
+  @Min(0)
   @Max(10) // El valor 10 queda permitido
   cover?: number;
 
