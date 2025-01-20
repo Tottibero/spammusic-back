@@ -265,6 +265,7 @@ export class DiscsService {
     const query = `
       SELECT 
         d.*, 
+        a.name AS "artistName", -- Nombre del artista
         g.name AS "genreName", -- Nombre del género
         g.color AS "genreColor", -- Color del género (si existe en tu modelo)
         (SELECT COALESCE(AVG(r.rate), 0) FROM rate r WHERE r."discId" = d.id) AS "averageRate",
@@ -296,6 +297,9 @@ export class DiscsService {
     // Transformar los resultados en objetos compatibles con el componente
     const processedDiscs = topRatedDiscs.map((disc) => ({
       ...disc,
+      artist: {
+        name: disc.artistName, // Incluye el nombre del artista
+      },
       genre: {
         name: disc.genreName, // Incluye el nombre del género
         color: disc.genreColor, // Incluye el color del género (si es aplicable)
