@@ -25,6 +25,10 @@ export class PaginationDto {
   query?: string; // Permitir el parámetro `query` como opcional
 
   @IsOptional()
+  @IsString()
+  genre?: string; // Permitir el parámetro `query` como opcional
+
+  @IsOptional()
   @IsArray() // Validación para asegurarse de que es un array
   @ArrayMinSize(2) // El array debe contener al menos 2 elementos (startDate y endDate)
   @ValidateNested({ each: true }) // Valida cada elemento del array

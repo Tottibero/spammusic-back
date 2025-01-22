@@ -33,7 +33,7 @@ export class DiscsService {
   }
 
   async findAll(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
     const userId = user.id;
 
     const today = new Date();
@@ -86,6 +86,10 @@ export class DiscsService {
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
       );
+    }
+
+    if (genre) {
+      queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
     queryBuilder
