@@ -292,7 +292,7 @@ export class DiscsService {
       LEFT JOIN artist a ON d."artistId" = a.id
       LEFT JOIN genre g ON d."genreId" = g.id
       ORDER BY d.featured DESC, "averageRate" DESC 
-      LIMIT 8;
+      LIMIT 10;
     `;
 
     // Ejecutar consulta directa pasando el ID del usuario como parámetro
