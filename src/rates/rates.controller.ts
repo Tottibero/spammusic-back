@@ -28,8 +28,9 @@ export class RatesController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.ratesService.findAll(paginationDto);
+  @Auth()
+  findAll(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
+    return this.ratesService.findAllByUser(paginationDto, user);
   }
 
   @Get(':id')

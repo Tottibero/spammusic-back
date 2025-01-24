@@ -27,7 +27,6 @@ export class RatesService {
   async create(createRateDto: CreateRateDto, user: User) {
     try {
       const { discId, ...rateData } = createRateDto;
-      console.log(createRateDto.discId);
       const disc = await this.rateRepository.manager.findOne(Disc, {
         where: { id: discId },
       });
@@ -49,14 +48,116 @@ export class RatesService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
-    const { limit = 10, offset = 0 } = paginationDto;
+  async findAllByUser(paginationDto: PaginationDto, user: User) {
+    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
+    const userId = user.id;
 
-    const [rates, totalItems] = await this.rateRepository.findAndCount({
-      take: limit,
-      skip: offset,
-    });
+    // Definir rango de fechas si se proporciona
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    if (dateRange && dateRange.length === 2) {
+      [startDate, endDate] = dateRange;
+    }
 
+    const queryBuilder = this.rateRepository
+      .createQueryBuilder('rate')
+      .leftJoinAndSelect('rate.disc', 'disc') // Relación con los discos
+      .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
+      .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
+      .where('rate.userId = :userId', { userId }); // Filtrar por usuario
+
+    // Aplicar filtro de rango de fechas
+    if (startDate && endDate) {
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        {
+          startDate,
+          endDate,
+        },
+      );
+    }
+
+    // Aplicar filtro de búsqueda
+    if (query) {
+      const search = `%${query}%`;
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
+    // Aplicar filtro de género
+    if (genre) {
+      queryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    // Agregar cálculos de promedio para rate y cover
+    queryBuilder
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.rate)', 'averageRate')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageRate')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.cover)', 'averageCover')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageCover');
+
+    // Aplicar paginación
+    queryBuilder
+      .take(limit)
+      .skip(offset)
+      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento
+      .addOrderBy('artist.name', 'ASC'); // Ordenar por nombre del artista
+
+    const { entities: rates, raw } = await queryBuilder.getRawAndEntities();
+
+    // Procesar las entidades para incluir valores calculados
+    const processedRates = rates.map((rate, index) => ({
+      ...rate,
+      disc: {
+        ...rate.disc,
+        userRate: {
+          rate: rate.rate,
+          cover: rate.cover,
+          id: rate.id,
+        },
+        averageRate: parseFloat(raw[index].averageRate) || null,
+        averageCover: parseFloat(raw[index].averageCover) || null,
+      },
+    }));
+
+    // Obtener el total de elementos para la paginación
+    const totalItemsQueryBuilder = this.rateRepository
+      .createQueryBuilder('rate')
+      .leftJoin('rate.disc', 'disc')
+      .leftJoin('disc.artist', 'artist')
+      .leftJoin('disc.genre', 'genre')
+      .where('rate.userId = :userId', { userId });
+
+    if (startDate && endDate) {
+      totalItemsQueryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        { startDate, endDate },
+      );
+    }
+
+    if (query) {
+      const search = `%${query}%`;
+      totalItemsQueryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
+    if (genre) {
+      totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);
     const currentPage = Math.floor(offset / limit) + 1;
 
@@ -65,7 +166,7 @@ export class RatesService {
       totalPages,
       currentPage,
       limit,
-      data: rates,
+      data: processedRates,
     };
   }
 
