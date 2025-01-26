@@ -35,7 +35,11 @@ export class AuthService {
 
       return {
         ...user,
-        token: this.getJwtToken({ username: user.username, id: user.id }),
+        token: this.getJwtToken({
+          username: user.username,
+          id: user.id,
+          roles: user.roles,
+        }),
       };
     } catch (e) {
       this.handleDBerrors(e);
@@ -56,12 +60,30 @@ export class AuthService {
 
     return {
       ...user,
-      token: this.getJwtToken({ username: user.username, id: user.id }),
+      token: this.getJwtToken({
+        username: user.username,
+        id: user.id,
+        roles: user.roles,
+      }),
     };
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async findAll() {
+    try {
+      const users = await this.userRepository.find({
+        select: ['id', 'username', 'email', 'roles'], // Ajusta los campos que deseas incluir
+      });
+
+      // Opcional: si no quieres devolver la contraseña u otros datos sensibles
+      return users.map((user) => {
+        delete user.password;
+        delete user.email;
+        delete user.roles;
+        return user;
+      });
+    } catch (error) {
+      this.handleDBerrors(error);
+    }
   }
 
   findOne(id: number) {

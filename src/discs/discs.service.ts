@@ -158,7 +158,10 @@ export class DiscsService {
         'rate',
         'rate.userId = :userId', // Filtro para calificaciones del usuario específico
         { userId },
-      );
+      )
+      .leftJoinAndSelect('disc.asignations', 'asignation') // Incluye las asignaciones
+      .leftJoinAndSelect('asignation.user', 'asignationUser') // Incluye información del usuario en asignaciones
+      .leftJoinAndSelect('asignation.list', 'asignationList'); // Incluye información de la lista en asignaciones
 
     console.log('query', query);
 
@@ -202,6 +205,12 @@ export class DiscsService {
       acc[dateKey].push({
         ...disc,
         userRate: disc.rates.length > 0 ? disc.rates[0] : null, // Devuelve la votación del usuario o null si no existe
+        asignations: disc.asignations.map((asignation) => ({
+          id: asignation.id,
+          done: asignation.done,
+          user: asignation.user, // Información del usuario
+          list: asignation.list, // Información de la lista
+        })), // Incluye asignaciones
       });
       return acc;
     }, {});

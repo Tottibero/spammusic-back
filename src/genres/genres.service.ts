@@ -65,7 +65,7 @@ export class GenresService {
       take: limit,
       skip: offset,
       order: {
-        name: 'ASC', // Orden ascendente por el campo 'name'. Cambia a 'DESC' si prefieres descendente.
+        name: 'ASC',
       },
     });
 

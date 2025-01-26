@@ -1,3 +1,4 @@
+import { Asignation } from 'src/asignations/entities/asignations.entity';
 import { Rate } from 'src/rates/entities/rate.entity';
 import {
   BeforeInsert,
@@ -37,6 +38,11 @@ export class User {
 
   @OneToMany(() => Rate, (rate) => rate.user, { cascade: true })
   rate: Rate;
+
+  @OneToMany(() => Asignation, (asignation) => asignation.user, {
+    cascade: true,
+  })
+  asignations: Asignation[];
 
   @BeforeInsert()
   checkFieldsBeforeInsert() {

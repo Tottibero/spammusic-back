@@ -8,6 +8,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Asignation } from 'src/asignations/entities/asignations.entity';
 
 @Entity()
 export class Disc {
@@ -46,4 +47,7 @@ export class Disc {
 
   @OneToMany(() => Rate, (rate) => rate.disc)
   rates: Rate[];
+
+  @OneToMany(() => Asignation, (asignation) => asignation.disc)
+  asignations: Asignation[];
 }

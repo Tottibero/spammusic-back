@@ -12,6 +12,8 @@ import { DiscModule } from './discs/discs.module';
 import { ScrapingModule } from './scaping/scraping.module';
 import { AuthModule } from './auth/auth.module';
 import { RatesModule } from './rates/rates.module';
+import { AsignationsModule } from './asignations/asignations.module';
+import { ListsModule } from './lists/list.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { RatesModule } from './rates/rates.module';
     ScrapingModule,
     AuthModule,
     RatesModule,
+    AsignationsModule,
+    ListsModule,
   ],
 })
 export class AppModule {}
