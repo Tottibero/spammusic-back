@@ -49,6 +49,7 @@ export class List {
 
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,
+    eager: true,
   })
   asignations: Asignation[];
 }

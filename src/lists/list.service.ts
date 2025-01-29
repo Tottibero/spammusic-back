@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, MoreThan, Repository } from 'typeorm';
 import { List } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -52,6 +52,38 @@ export class ListsService {
       limit,
       data: lists,
     };
+  }
+
+  async findUpcoming() {
+    const today = new Date();
+    const twoWeeksFromToday = new Date();
+    twoWeeksFromToday.setDate(today.getDate() + 14);
+
+    const lists = await this.listRepository.find({
+      where: {
+        releaseDate: Between(today, twoWeeksFromToday), // Usa Between para definir el rango
+      },
+      order: {
+        releaseDate: 'ASC',
+      },
+    });
+    return lists;
+  }
+
+  async findNext() {
+    const today = new Date();
+    const twoWeeksFromToday = new Date();
+    twoWeeksFromToday.setDate(today.getDate() + 14);
+
+    const lists = await this.listRepository.find({
+      where: {
+        releaseDate: MoreThan(twoWeeksFromToday), // Usa Between para definir el rango
+      },
+      order: {
+        releaseDate: 'ASC',
+      },
+    });
+    return lists;
   }
 
   async findOne(id: string): Promise<List> {

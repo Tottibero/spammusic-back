@@ -32,6 +32,18 @@ export class ListsController {
     return this.listsServices.findAll(paginationDto);
   }
 
+  @Get('weeks')
+  @Auth()
+  findTwoWeeks() {
+    return this.listsServices.findUpcoming();
+  }
+
+  @Get('next')
+  @Auth()
+  findNext() {
+    return this.listsServices.findNext();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.listsServices.findOne(id);
