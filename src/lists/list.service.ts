@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, MoreThan, Repository } from 'typeorm';
+import { Between, In, MoreThan, Not, Repository } from 'typeorm';
 import { List } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -32,11 +32,18 @@ export class ListsService {
   }
 
   async findAll(paginationDto: PaginationDto) {
-    const { limit = 10, offset = 0 } = paginationDto;
+    const { limit = 40, offset = 0, statusExclusions = [] } = paginationDto;
+
+    const whereConditions: any = {};
+
+    if (statusExclusions.length > 0) {
+      whereConditions.status = Not(In(statusExclusions)); // Corrección: Usar Not(In()) en lugar de $not y $in
+    }
 
     const [lists, totalItems] = await this.listRepository.findAndCount({
       take: limit,
       skip: offset,
+      where: whereConditions,
       order: {
         name: 'ASC',
       },
