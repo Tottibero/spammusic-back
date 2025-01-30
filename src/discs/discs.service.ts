@@ -284,33 +284,57 @@ export class DiscsService {
     totalDiscs: number;
     totalVotes: number;
   }> {
-    const userId = user.id; // Obtener el ID del usuario para personalizar la consulta
+    const userId = user.id;
 
+    // Consulta de estadísticas globales
+    const globalStatsQuery = `
+      SELECT 
+        AVG(avgRates) AS globalAvgRate,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY voteCount) AS medianVotes
+      FROM (
+        SELECT 
+          d.id, 
+          COUNT(r.id) AS voteCount,
+          COALESCE(AVG(r.rate), 0) AS avgRates
+        FROM disc d
+        LEFT JOIN rate r ON d.id = r."discId"
+        GROUP BY d.id
+      ) AS rate_stats;
+    `;
+
+    const { globalavgrate, medianvotes } =
+      await this.discRepository.query(globalStatsQuery);
+    const globalAvgRate = parseFloat(globalavgrate) || 0;
+    const medianVotes = parseInt(medianvotes, 10) || 1;
+
+    // Consulta principal con Weighted Score
     const query = `
       SELECT 
         d.*, 
-        a.name AS "artistName", -- Nombre del artista
-        g.name AS "genreName", -- Nombre del género
-        g.color AS "genreColor", -- Color del género (si existe en tu modelo)
-        (SELECT COALESCE(AVG(r.rate), 0) FROM rate r WHERE r."discId" = d.id) AS "averageRate",
-        (SELECT COALESCE(AVG(r.cover), 0) FROM rate r WHERE r."discId" = d.id) AS "averageCover",
+        a.name AS "artistName", 
+        g.name AS "genreName", 
+        g.color AS "genreColor", 
+        COUNT(r.id) AS voteCount, 
+        COALESCE(AVG(r.rate), 0) AS "averageRate", 
+        COALESCE(AVG(r.cover), 0) AS "averageCover", 
         (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
         (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
-        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover"
+        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
+        ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
+        (COUNT(r.id) + ${medianVotes}) AS weightedScore
       FROM disc d
       LEFT JOIN artist a ON d."artistId" = a.id
       LEFT JOIN genre g ON d."genreId" = g.id
-      ORDER BY d.featured DESC, "averageRate" DESC 
-      LIMIT 10;
+      LEFT JOIN rate r ON d.id = r."discId"
+      GROUP BY d.id, a.name, g.name, g.color
+      ORDER BY d.featured DESC, weightedScore DESC 
+      LIMIT 12;
     `;
 
-    // Ejecutar consulta directa pasando el ID del usuario como parámetro
     const topRatedDiscs = await this.discRepository.query(query, [userId]);
 
-    // Opcional: Consulta para el total de discos
+    // Obtener estadísticas adicionales
     const totalDiscs = await this.discRepository.count();
-
-    // Opcional: Consulta para el total de votos
     const totalVotes = await this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.rates', 'rates')
@@ -318,16 +342,11 @@ export class DiscsService {
       .getRawOne()
       .then((result) => parseInt(result.totalVotes, 10) || 0);
 
-    // Transformar los resultados en objetos compatibles con el componente
+    // Transformar datos en el formato esperado
     const processedDiscs = topRatedDiscs.map((disc) => ({
       ...disc,
-      artist: {
-        name: disc.artistName, // Incluye el nombre del artista
-      },
-      genre: {
-        name: disc.genreName, // Incluye el nombre del género
-        color: disc.genreColor, // Incluye el color del género (si es aplicable)
-      },
+      artist: { name: disc.artistName },
+      genre: { name: disc.genreName, color: disc.genreColor },
       userRate: disc.userRateId
         ? {
             id: disc.userRateId,
@@ -335,8 +354,10 @@ export class DiscsService {
             cover: parseFloat(disc.userCover) || null,
           }
         : null,
-      averageRate: parseFloat(disc.averageRate) || null,
-      averageCover: parseFloat(disc.averageCover) || null,
+      averageRate: disc.averageRate !== null ? parseFloat(disc.averageRate) : 0, // 💡 Asegura que no sea `null`
+      averageCover:
+        disc.averageCover !== null ? parseFloat(disc.averageCover) : 0, // 💡 Asegura que no sea `null`
+      voteCount: parseInt(disc.voteCount, 10) || 0,
     }));
 
     return {
