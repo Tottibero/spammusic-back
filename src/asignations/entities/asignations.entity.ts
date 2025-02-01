@@ -22,4 +22,7 @@ export class Asignation {
 
   @ManyToOne(() => List, (list) => list.asignations, { onDelete: 'CASCADE' })
   list: List;
+
+  @Column('int', { nullable: true })
+  position: number;
 }

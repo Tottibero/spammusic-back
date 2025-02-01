@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
 export class CreateAsignationDto {
   @IsOptional()
@@ -13,4 +13,10 @@ export class CreateAsignationDto {
 
   @IsUUID('4')
   listId: string;
+
+  // Opcional, mismas validaciones que rate
+  @ValidateIf((o) => o.rate !== null && o.rate !== undefined)
+  @IsOptional()
+  @IsNumber()
+  position?: number;
 }
