@@ -291,6 +291,7 @@ export class DiscsService {
       user: { id: number; username: string };
       totalCover: number;
     }[];
+    ratingDistribution: { rate: number; count: number }[];
   }> {
     const userId = user.id;
 
@@ -349,36 +350,50 @@ export class DiscsService {
       .getRawOne();
     const totalVotes = parseInt(totalVotesResult.totalVotes, 10) || 0;
 
-    // --- Nuevas consultas para obtener las listas de usuarios ---
-
-    // Usuarios con más rates (contamos la cantidad de registros en la tabla "rate")
+    // --- Consulta para obtener los top usuarios por cantidad de rates ---
     const topUsersByRatesQuery = `
-    SELECT u.id AS "userId", u.username, COUNT(r.id) AS "rateCount"
-    FROM rate r
-    JOIN "users" u ON u.id = r."userId"
-    WHERE r.rate IS NOT NULL
-    GROUP BY u.id, u.username
-    ORDER BY "rateCount" DESC
-    LIMIT 3;
-  `;
+      SELECT u.id AS "userId", u.username, COUNT(r.id) AS "rateCount"
+      FROM rate r
+      JOIN "users" u ON u.id = r."userId"
+      WHERE r.rate IS NOT NULL
+      GROUP BY u.id, u.username
+      ORDER BY "rateCount" DESC
+      LIMIT 3;
+    `;
     const topUsersByRates =
       await this.discRepository.query(topUsersByRatesQuery);
 
-    // Usuarios con mayor suma de valores en "cover"
+    // --- Consulta para obtener los top usuarios por cover (cantidad de votos con cover) ---
     const topUsersByCoverQuery = `
-    SELECT u.id AS "userId", u.username, COUNT(r.id) AS "coverCount"
-    FROM rate r
-    JOIN "users" u ON u.id = r."userId"
-    WHERE r.cover IS NOT NULL
-    GROUP BY u.id, u.username
-    ORDER BY "coverCount" DESC
-    LIMIT 3;
-  `;
+      SELECT u.id AS "userId", u.username, COUNT(r.id) AS "coverCount"
+      FROM rate r
+      JOIN "users" u ON u.id = r."userId"
+      WHERE r.cover IS NOT NULL
+      GROUP BY u.id, u.username
+      ORDER BY "coverCount" DESC
+      LIMIT 3;
+    `;
     const topUsersByCover =
       await this.discRepository.query(topUsersByCoverQuery);
 
+    // --- Nueva consulta: Distribución de ratings ---
+    const ratingDistributionQuery = `
+      SELECT r.rate AS "rateValue", COUNT(*) AS "count"
+      FROM rate r
+      WHERE r.rate IS NOT NULL
+      GROUP BY r.rate
+      ORDER BY r.rate;
+    `;
+    const ratingDistributionResult = await this.discRepository.query(
+      ratingDistributionQuery,
+    );
+    const ratingDistribution = ratingDistributionResult.map((row: any) => ({
+      rate: parseFloat(row.rateValue),
+      count: parseInt(row.count, 10),
+    }));
+
     // --- Transformación de los datos para el formato esperado ---
-    const processedDiscs = topRatedDiscs.map((disc) => ({
+    const processedDiscs = topRatedDiscs.map((disc: any) => ({
       ...disc,
       artist: { name: disc.artistName },
       genre: { name: disc.genreName, color: disc.genreColor },
@@ -399,20 +414,21 @@ export class DiscsService {
       discs: processedDiscs,
       totalDiscs,
       totalVotes,
-      topUsersByRates: topUsersByRates.map((row) => ({
+      topUsersByRates: topUsersByRates.map((row: any) => ({
         user: {
           id: row.userId,
           username: row.username,
         },
         rateCount: parseInt(row.rateCount, 10),
       })),
-      topUsersByCover: topUsersByCover.map((row) => ({
+      topUsersByCover: topUsersByCover.map((row: any) => ({
         user: {
           id: row.userId,
           username: row.username,
         },
         totalCover: parseInt(row.coverCount, 10),
       })),
+      ratingDistribution, // Aquí incluimos la distribución de ratings
     };
   }
 
