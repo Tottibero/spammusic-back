@@ -356,21 +356,23 @@ export class DiscsService {
     SELECT u.id AS "userId", u.username, COUNT(r.id) AS "rateCount"
     FROM rate r
     JOIN "users" u ON u.id = r."userId"
+    WHERE r.rate IS NOT NULL
     GROUP BY u.id, u.username
     ORDER BY "rateCount" DESC
-    LIMIT 10;
+    LIMIT 5;
   `;
     const topUsersByRates =
       await this.discRepository.query(topUsersByRatesQuery);
 
     // Usuarios con mayor suma de valores en "cover"
     const topUsersByCoverQuery = `
-    SELECT u.id AS "userId", u.username, SUM(r.cover) AS "totalCover"
+    SELECT u.id AS "userId", u.username, COUNT(r.id) AS "totalCover"
     FROM rate r
     JOIN "users" u ON u.id = r."userId"
+    WHERE r.cover IS NOT NULL
     GROUP BY u.id, u.username
     ORDER BY "totalCover" DESC
-    LIMIT 10;
+    LIMIT 5;
   `;
     const topUsersByCover =
       await this.discRepository.query(topUsersByCoverQuery);
@@ -409,7 +411,7 @@ export class DiscsService {
           id: row.userId,
           username: row.username,
         },
-        totalCover: parseFloat(row.totalCover),
+        totalCover: parseFloat(row.coverCount),
       })),
     };
   }
