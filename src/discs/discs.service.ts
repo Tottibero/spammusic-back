@@ -283,14 +283,22 @@ export class DiscsService {
     discs: Disc[];
     totalDiscs: number;
     totalVotes: number;
+    topUsersByRates: {
+      user: { id: number; username: string };
+      rateCount: number;
+    }[];
+    topUsersByCover: {
+      user: { id: number; username: string };
+      totalCover: number;
+    }[];
   }> {
     const userId = user.id;
 
-    // Consulta de estadísticas globales
+    // --- Cálculo de estadísticas globales ---
     const globalStatsQuery = `
       SELECT 
-        AVG(avgRates) AS globalAvgRate,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY voteCount) AS medianVotes
+        AVG(avgRates) AS "globalAvgRate",
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY voteCount) AS "medianVotes"
       FROM (
         SELECT 
           d.id, 
@@ -301,48 +309,73 @@ export class DiscsService {
         GROUP BY d.id
       ) AS rate_stats;
     `;
+    const globalStatsResult = await this.discRepository.query(globalStatsQuery);
+    const { globalAvgRate: globalAvgRateStr, medianVotes: medianVotesStr } =
+      globalStatsResult[0] || {};
+    const globalAvgRate = parseFloat(globalAvgRateStr) || 0;
+    const medianVotes = parseInt(medianVotesStr, 10) || 1;
 
-    const { globalavgrate, medianvotes } =
-      await this.discRepository.query(globalStatsQuery);
-    const globalAvgRate = parseFloat(globalavgrate) || 0;
-    const medianVotes = parseInt(medianvotes, 10) || 1;
-
-    // Consulta principal con Weighted Score
+    // --- Consulta principal de discos (ordenados por featured y weightedScore) ---
     const query = `
       SELECT 
         d.*, 
         a.name AS "artistName", 
         g.name AS "genreName", 
         g.color AS "genreColor", 
-        COUNT(r.id) AS voteCount, 
+        COUNT(r.id) AS "voteCount", 
         COALESCE(AVG(r.rate), 0) AS "averageRate", 
         COALESCE(AVG(r.cover), 0) AS "averageCover", 
         (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
         (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
         (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
         ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
-        (COUNT(r.id) + ${medianVotes}) AS weightedScore
+        (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
       FROM disc d
       LEFT JOIN artist a ON d."artistId" = a.id
       LEFT JOIN genre g ON d."genreId" = g.id
       LEFT JOIN rate r ON d.id = r."discId"
       GROUP BY d.id, a.name, g.name, g.color
-      ORDER BY d.featured DESC, weightedScore DESC 
+      ORDER BY d.featured DESC, "weightedScore" DESC 
       LIMIT 12;
     `;
-
     const topRatedDiscs = await this.discRepository.query(query, [userId]);
 
-    // Obtener estadísticas adicionales
+    // --- Otras estadísticas: total de discos y total de votes ---
     const totalDiscs = await this.discRepository.count();
-    const totalVotes = await this.discRepository
+    const totalVotesResult = await this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.rates', 'rates')
       .select('COUNT(rates.id)', 'totalVotes')
-      .getRawOne()
-      .then((result) => parseInt(result.totalVotes, 10) || 0);
+      .getRawOne();
+    const totalVotes = parseInt(totalVotesResult.totalVotes, 10) || 0;
 
-    // Transformar datos en el formato esperado
+    // --- Nuevas consultas para obtener las listas de usuarios ---
+
+    // Usuarios con más rates (contamos la cantidad de registros en la tabla "rate")
+    const topUsersByRatesQuery = `
+    SELECT u.id AS "userId", u.username, COUNT(r.id) AS "rateCount"
+    FROM rate r
+    JOIN "users" u ON u.id = r."userId"
+    GROUP BY u.id, u.username
+    ORDER BY "rateCount" DESC
+    LIMIT 10;
+  `;
+    const topUsersByRates =
+      await this.discRepository.query(topUsersByRatesQuery);
+
+    // Usuarios con mayor suma de valores en "cover"
+    const topUsersByCoverQuery = `
+    SELECT u.id AS "userId", u.username, SUM(r.cover) AS "totalCover"
+    FROM rate r
+    JOIN "users" u ON u.id = r."userId"
+    GROUP BY u.id, u.username
+    ORDER BY "totalCover" DESC
+    LIMIT 10;
+  `;
+    const topUsersByCover =
+      await this.discRepository.query(topUsersByCoverQuery);
+
+    // --- Transformación de los datos para el formato esperado ---
     const processedDiscs = topRatedDiscs.map((disc) => ({
       ...disc,
       artist: { name: disc.artistName },
@@ -354,9 +387,9 @@ export class DiscsService {
             cover: parseFloat(disc.userCover) || null,
           }
         : null,
-      averageRate: disc.averageRate !== null ? parseFloat(disc.averageRate) : 0, // 💡 Asegura que no sea `null`
+      averageRate: disc.averageRate !== null ? parseFloat(disc.averageRate) : 0,
       averageCover:
-        disc.averageCover !== null ? parseFloat(disc.averageCover) : 0, // 💡 Asegura que no sea `null`
+        disc.averageCover !== null ? parseFloat(disc.averageCover) : 0,
       voteCount: parseInt(disc.voteCount, 10) || 0,
     }));
 
@@ -364,6 +397,20 @@ export class DiscsService {
       discs: processedDiscs,
       totalDiscs,
       totalVotes,
+      topUsersByRates: topUsersByRates.map((row) => ({
+        user: {
+          id: row.userId,
+          username: row.username,
+        },
+        rateCount: parseInt(row.rateCount, 10),
+      })),
+      topUsersByCover: topUsersByCover.map((row) => ({
+        user: {
+          id: row.userId,
+          username: row.username,
+        },
+        totalCover: parseFloat(row.totalCover),
+      })),
     };
   }
 
