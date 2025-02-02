@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 
 import { Artist } from 'src/artists/entities/artist.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
@@ -68,6 +68,7 @@ export class ScrapingService {
         continue;
       }
 
+      // Normalizamos la línea, reemplazando " - " por " – " (guion largo)
       const normalizedAlbumLine = albumLine.replace(' - ', ' – ');
       const [artistName, discInfo] = normalizedAlbumLine.split(' – ');
       if (!artistName || !discInfo) {
@@ -81,8 +82,9 @@ export class ScrapingService {
         discName = discName.replace(`(${match[1]})`, '').trim();
       }
 
+      // Búsqueda del artista de forma insensible a mayúsculas/minúsculas
       let artist = await this.artistRepository.findOne({
-        where: { name: artistName },
+        where: { name: ILike(artistName.trim()) },
       });
       if (!artist) {
         artist = this.artistRepository.create({
@@ -94,8 +96,12 @@ export class ScrapingService {
         artist = await this.artistRepository.save(artist);
       }
 
+      // Búsqueda del disco de forma insensible a mayúsculas/minúsculas
       let disc = await this.discRepository.findOne({
-        where: { name: discName, artist: { id: artist.id } },
+        where: {
+          name: ILike(discName.trim()),
+          artist: { id: artist.id },
+        },
       });
       if (!disc) {
         disc = this.discRepository.create({
