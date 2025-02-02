@@ -37,7 +37,10 @@ export class ScrapingService {
     }
   }
 
-  async processManualData(date: string, albums: string[]) {
+  async processManualData(
+    date: string,
+    albums: string[],
+  ): Promise<{ savedDiscs: string[]; existingDiscs: string[] }> {
     this.log(`Processing manual data for date: ${date}`);
 
     const releaseDate = this.parseDateString(date);
@@ -50,8 +53,14 @@ export class ScrapingService {
       where: { name: 'Sin pais' },
     });
     const defaultGenre = await this.genreRepository.findOne({
-      where: { name: 'Sin genero' },
+      where: { name: '?' },
     });
+
+    // Arrays para acumular el reporte
+    const report = {
+      savedDiscs: [] as string[],
+      existingDiscs: [] as string[],
+    };
 
     for (const albumLine of albums) {
       if (albumLine.toLowerCase().includes('re-release')) {
@@ -60,7 +69,6 @@ export class ScrapingService {
       }
 
       const normalizedAlbumLine = albumLine.replace(' - ', ' – ');
-
       const [artistName, discInfo] = normalizedAlbumLine.split(' – ');
       if (!artistName || !discInfo) {
         this.log(`Unexpected format: ${albumLine}`);
@@ -104,12 +112,20 @@ export class ScrapingService {
         this.log(
           `Processed: Artist "${artistName}" => Disc "${discName}" => Date: ${releaseDate}`,
         );
+        report.savedDiscs.push(
+          `Artist "${artistName}" => Disc "${discName}" => Date: ${releaseDate}`,
+        );
       } else {
         this.log(
           `Already exists: Artist "${artistName}" => Disc "${discName}"`,
         );
+        report.existingDiscs.push(
+          `Artist "${artistName}" => Disc "${discName}"`,
+        );
       }
     }
+
+    return report;
   }
 
   private parseDateString(dateStr: string): Date | null {
