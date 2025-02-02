@@ -33,7 +33,7 @@ export class DiscsController {
   }
 
   @Auth()
-  @Get('pepe')
+  @Get('homeDiscs')
   findTopRatedOrFeatured(@GetUser() user: User) {
     return this.discsServices.findTopRatedOrFeaturedAndStats(user);
   }
