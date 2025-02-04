@@ -17,7 +17,10 @@ export class ReunionService {
   }
 
   async findAll(): Promise<Reunion[]> {
-    return this.reunionRepository.find({ relations: ['points'] }); // Incluir los puntos relacionados
+    return this.reunionRepository.find({
+      relations: ['points'], // Incluir los puntos relacionados
+      order: { fecha: 'DESC' }, // Ordenar por fecha de manera ascendente
+    });
   }
 
   async findOne(id: number): Promise<Reunion> {
