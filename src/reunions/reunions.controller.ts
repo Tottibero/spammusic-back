@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Patch,
 } from '@nestjs/common';
 import { ReunionService } from './reunions.service';
 import { CreateReunionDto } from './dto/create-reunion.dto';
@@ -29,7 +30,7 @@ export class ReunionController {
     return this.reunionService.findOne(id);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async update(
     @Param('id') id: number,
     @Body() updateData: Partial<CreateReunionDto>,

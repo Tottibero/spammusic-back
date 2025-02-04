@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Patch,
 } from '@nestjs/common';
 import { PointService } from './points.service';
 import { CreatePointDto } from './dto/create-points.dto';
@@ -29,7 +30,7 @@ export class PointController {
     return this.pointService.findOne(id);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async update(
     @Param('id') id: number,
     @Body() updateData: Partial<CreatePointDto>,
