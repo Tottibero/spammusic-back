@@ -13,6 +13,7 @@ import { Disc } from './entities/disc.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { Genre } from 'src/genres/entities/genre.entity';
+import { Artist } from 'src/artists/entities/artist.entity';
 @Injectable()
 export class DiscsService {
   private readonly logger = new Logger('DiscsService');
@@ -241,7 +242,7 @@ export class DiscsService {
 
   async update(id: string, updateDiscDto: UpdateDiscDto) {
     // Sacamos genreId aparte
-    const { genreId, ...restDto } = updateDiscDto;
+    const { genreId, artistId, ...restDto } = updateDiscDto;
 
     // Cargamos un parcial de disc con preload
     const disc = await this.discRepository.preload({
@@ -252,16 +253,12 @@ export class DiscsService {
     if (!disc) throw new NotFoundException(`Disc with id ${id} not found`);
 
     try {
-      // Asignamos la relación manualmente
       if (genreId) {
-        // Opción A: si no te interesa cargar la info del género,
-        // basta con crear un objeto con su id.
         disc.genre = { id: genreId } as Genre;
+      }
 
-        // Opción B: si quieres verificar que el género existe:
-        // const genre = await this.genreRepository.findOneBy({ id: genreId });
-        // if (!genre) throw new NotFoundException(`Genre with id ${genreId} not found`);
-        // disc.genre = genre;
+      if (artistId) {
+        disc.artist = { id: artistId } as Artist;
       }
 
       await this.discRepository.save(disc);
