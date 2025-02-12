@@ -99,11 +99,20 @@ export class AuthService {
     updateData: Partial<User>,
   ): Promise<User> {
     const user = await this.findOne(id);
+
+    if (updateData.password) {
+      updateData.password = bcrypt.hashSync(updateData.password, 10);
+    }
+
     Object.assign(user, updateData);
     return this.userRepository.save(user);
   }
 
   async updateUser(updateData: Partial<User>, user: User): Promise<User> {
+    if (updateData.password) {
+      updateData.password = bcrypt.hashSync(updateData.password, 10);
+    }
+
     Object.assign(user, updateData);
     return this.userRepository.save(user);
   }
