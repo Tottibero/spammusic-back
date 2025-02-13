@@ -86,6 +86,21 @@ export class FavoritesService {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
+    // Cálculo de promedios
+    queryBuilder
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.rate)', 'averageRate')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageRate')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.cover)', 'averageCover')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageCover');
+
     queryBuilder
       .take(limit)
       .skip(offset)
@@ -94,7 +109,7 @@ export class FavoritesService {
 
     const { entities: favorites, raw } = await queryBuilder.getRawAndEntities();
 
-    // Procesar los resultados para incluir los rates si existen
+    // Procesar los resultados para incluir los rates y promedios si existen
     const processedFavorites = favorites.map((favorite, index) => ({
       ...favorite,
       disc: {
@@ -104,12 +119,13 @@ export class FavoritesService {
         },
         userRate: raw[index].rateId
           ? {
-              // Si tiene un rate, lo agregamos
               id: raw[index].rateId,
               rate: raw[index].userRate,
               cover: raw[index].userCover,
             }
           : null, // Si no tiene rate, enviamos null
+        averageRate: parseFloat(raw[index].averageRate) || null,
+        averageCover: parseFloat(raw[index].averageCover) || null,
       },
     }));
 
@@ -151,8 +167,7 @@ export class FavoritesService {
       limit,
       data: processedFavorites,
     };
-}
-
+  }
   async findOne(id: string): Promise<Favorite> {
     try {
       const favorite = await this.favoriteRepository.findOneByOrFail({ id });
