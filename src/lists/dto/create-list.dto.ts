@@ -26,8 +26,4 @@ export class CreateListDto {
   @IsDateString()
   @IsOptional()
   releaseDate?: Date;
-
-  @IsString()
-  @IsOptional()
-  link?: string;
 }

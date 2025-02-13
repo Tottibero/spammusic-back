@@ -16,6 +16,10 @@ import { AsignationsModule } from './asignations/asignations.module';
 import { ListsModule } from './lists/list.module';
 import { ReunionsModule } from './reunions/reunions.module';
 import { PointsModule } from './points/points.module';
+import { LinksModule } from './links/links.module';
+import { SeedModule } from './seeds/seed.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { PendingsModule } from './pendings/pendings.module';
 
 @Module({
   imports: [
@@ -50,6 +54,10 @@ import { PointsModule } from './points/points.module';
     ListsModule,
     ReunionsModule,
     PointsModule,
+    LinksModule,
+    SeedModule,
+    FavoritesModule,
+    PendingsModule,
   ],
 })
 export class AppModule {}

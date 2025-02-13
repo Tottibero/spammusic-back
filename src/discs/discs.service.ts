@@ -48,12 +48,15 @@ export class DiscsService {
 
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
-      .leftJoinAndSelect('disc.artist', 'artist') // Incluye la relación de artista
-      .leftJoinAndSelect('disc.genre', 'genre') // Incluye la relación de género
+      .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('disc.genre', 'genre')
+      .leftJoinAndSelect('disc.rates', 'rate', 'rate.userId = :userId', {
+        userId,
+      })
       .leftJoinAndSelect(
-        'disc.rates',
-        'rate',
-        'rate.userId = :userId', // Filtro para las calificaciones del usuario específico
+        'disc.favorites',
+        'favorite',
+        'favorite.userId = :userId',
         { userId },
       )
       .addSelect((subQuery) => {
@@ -61,13 +64,13 @@ export class DiscsService {
           .select('AVG(rate.rate)', 'averageRate')
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
-      }, 'averageRate') // Alias debe ser "averageRate"
+      }, 'averageRate')
       .addSelect((subQuery) => {
         return subQuery
           .select('AVG(rate.cover)', 'averageCover')
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
-      }, 'averageCover') // Media de las calificaciones de cover
+      }, 'averageCover')
       .where('disc.releaseDate <= :today', { today });
 
     // Aplica el filtro de mes si está definido
@@ -104,8 +107,9 @@ export class DiscsService {
     const processedDiscs = discs.map((disc, index) => ({
       ...disc,
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
-      averageRate: parseFloat(raw[index].averageRate) || null, // Agrega averageRate
-      averageCover: parseFloat(raw[index].averageCover) || null, // Agrega averageCover
+      averageRate: parseFloat(raw[index].averageRate) || null,
+      averageCover: parseFloat(raw[index].averageCover) || null,
+      favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
     }));
 
     const totalItemsQueryBuilder = this.discRepository
@@ -152,17 +156,20 @@ export class DiscsService {
 
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
-      .leftJoinAndSelect('disc.artist', 'artist') // Incluye la relación de artista
-      .leftJoinAndSelect('disc.genre', 'genre') // Incluye la relación de género
+      .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('disc.genre', 'genre')
+      .leftJoinAndSelect('disc.rates', 'rate', 'rate.userId = :userId', {
+        userId,
+      })
+      .leftJoinAndSelect('disc.asignations', 'asignation')
+      .leftJoinAndSelect('asignation.user', 'asignationUser')
+      .leftJoinAndSelect('asignation.list', 'asignationList')
       .leftJoinAndSelect(
-        'disc.rates',
-        'rate',
-        'rate.userId = :userId', // Filtro para calificaciones del usuario específico
+        'disc.favorites',
+        'favorite',
+        'favorite.userId = :userId',
         { userId },
-      )
-      .leftJoinAndSelect('disc.asignations', 'asignation') // Incluye las asignaciones
-      .leftJoinAndSelect('asignation.user', 'asignationUser') // Incluye información del usuario en asignaciones
-      .leftJoinAndSelect('asignation.list', 'asignationList'); // Incluye información de la lista en asignaciones
+      );
 
     console.log('query', query);
 
@@ -199,19 +206,22 @@ export class DiscsService {
 
     // Agrupar discos por fechas de lanzamiento
     const groupedDiscs = discs.reduce((acc, disc) => {
-      const dateKey = new Date(disc.releaseDate).toISOString().split('T')[0]; // Mantén solo la fecha
+      const dateKey = new Date(disc.releaseDate).toISOString().split('T')[0];
+
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
+
       acc[dateKey].push({
         ...disc,
-        userRate: disc.rates.length > 0 ? disc.rates[0] : null, // Devuelve la votación del usuario o null si no existe
+        userRate: disc.rates.length > 0 ? disc.rates[0] : null,
+        favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito
         asignations: disc.asignations.map((asignation) => ({
           id: asignation.id,
           done: asignation.done,
-          user: asignation.user, // Información del usuario
-          list: asignation.list, // Información de la lista
-        })), // Incluye asignaciones
+          user: asignation.user,
+          list: asignation.list,
+        })),
       });
       return acc;
     }, {});
@@ -315,27 +325,30 @@ export class DiscsService {
 
     // --- Consulta principal de discos (ordenados por featured y weightedScore) ---
     const query = `
-      SELECT 
-        d.*, 
-        a.name AS "artistName", 
-        g.name AS "genreName", 
-        g.color AS "genreColor", 
-        COUNT(r.id) AS "voteCount", 
-        COALESCE(AVG(r.rate), 0) AS "averageRate", 
-        COALESCE(AVG(r.cover), 0) AS "averageCover", 
-        (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
-        (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
-        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
-        ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
-        (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
-      FROM disc d
-      LEFT JOIN artist a ON d."artistId" = a.id
-      LEFT JOIN genre g ON d."genreId" = g.id
-      LEFT JOIN rate r ON d.id = r."discId"
-      GROUP BY d.id, a.name, g.name, g.color
-      ORDER BY d.featured DESC, "weightedScore" DESC 
-      LIMIT 12;
-    `;
+    SELECT 
+      d.*, 
+      a.name AS "artistName", 
+      g.name AS "genreName", 
+      g.color AS "genreColor", 
+      COUNT(r.id) AS "voteCount", 
+      COALESCE(AVG(r.rate), 0) AS "averageRate", 
+      COALESCE(AVG(r.cover), 0) AS "averageCover", 
+      (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
+      (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
+      (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
+      (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
+      ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
+      (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
+    FROM disc d
+    LEFT JOIN artist a ON d."artistId" = a.id
+    LEFT JOIN genre g ON d."genreId" = g.id
+    LEFT JOIN rate r ON d.id = r."discId"
+    LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
+    GROUP BY d.id, a.name, g.name, g.color, f.id
+    ORDER BY d.featured DESC, "weightedScore" DESC 
+    LIMIT 12;
+  `;
+
     const topRatedDiscs = await this.discRepository.query(query, [userId]);
 
     // --- Otras estadísticas: total de discos y total de votes ---
@@ -401,6 +414,7 @@ export class DiscsService {
             cover: parseFloat(disc.userCover) || null,
           }
         : null,
+      favoriteId: disc.userFavoriteId || null, // Enviar el ID del favorito si existe
       averageRate: disc.averageRate !== null ? parseFloat(disc.averageRate) : 0,
       averageCover:
         disc.averageCover !== null ? parseFloat(disc.averageCover) : 0,

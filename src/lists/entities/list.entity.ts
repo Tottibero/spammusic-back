@@ -1,4 +1,5 @@
 import { Asignation } from 'src/asignations/entities/asignations.entity';
+import { Link } from 'src/links/entities/links.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum ListType {
@@ -44,12 +45,15 @@ export class List {
   @Column({ type: 'date', nullable: true })
   releaseDate?: Date;
 
-  @Column('varchar', { nullable: true })
-  link?: string;
-
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,
     eager: true,
   })
   asignations: Asignation[];
+
+  @OneToMany(() => Link, (link) => link.list, {
+    cascade: true,
+    eager: true,
+  })
+  links: Link[];
 }

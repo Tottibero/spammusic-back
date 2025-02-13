@@ -9,6 +9,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Asignation } from 'src/asignations/entities/asignations.entity';
+import { Favorite } from 'src/favorites/entities/favorite.entity';
+import { Pending } from 'src/pendings/entities/pending.entity';
 
 @Entity()
 export class Disc {
@@ -47,6 +49,12 @@ export class Disc {
 
   @OneToMany(() => Rate, (rate) => rate.disc)
   rates: Rate[];
+
+  @OneToMany(() => Favorite, (favorite) => favorite.disc, { eager: true })
+  favorites: Favorite[];
+
+  @OneToMany(() => Pending, (pending) => pending.disc, { eager: true })
+  pendings: Pending[];
 
   @OneToMany(() => Asignation, (asignation) => asignation.disc)
   asignations: Asignation[];

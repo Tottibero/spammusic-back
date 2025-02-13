@@ -52,7 +52,6 @@ export class RatesService {
     const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
     const userId = user.id;
 
-    // Definir rango de fechas si se proporciona
     let startDate: Date | undefined;
     let endDate: Date | undefined;
     if (dateRange && dateRange.length === 2) {
@@ -64,20 +63,22 @@ export class RatesService {
       .leftJoinAndSelect('rate.disc', 'disc') // Relación con los discos
       .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
       .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
-      .where('rate.userId = :userId', { userId }); // Filtrar por usuario
+      .leftJoin(
+        'favorite',
+        'favorite',
+        'favorite.discId = disc.id AND favorite.userId = :userId',
+        { userId },
+      ) // Relación con los favoritos del usuario
+      .addSelect('favorite.id', 'favoriteId') // Obtener el ID del favorito
+      .where('rate.userId = :userId', { userId });
 
-    // Aplicar filtro de rango de fechas
     if (startDate && endDate) {
       queryBuilder.andWhere(
         'disc.releaseDate BETWEEN :startDate AND :endDate',
-        {
-          startDate,
-          endDate,
-        },
+        { startDate, endDate },
       );
     }
 
-    // Aplicar filtro de búsqueda
     if (query) {
       const search = `%${query}%`;
       queryBuilder.andWhere(
@@ -86,12 +87,11 @@ export class RatesService {
       );
     }
 
-    // Aplicar filtro de género
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
-    // Agregar cálculos de promedio para rate y cover
+    // Cálculo de promedios
     queryBuilder
       .addSelect((subQuery) => {
         return subQuery
@@ -106,16 +106,15 @@ export class RatesService {
           .where('rate.discId = disc.id');
       }, 'averageCover');
 
-    // Aplicar paginación
     queryBuilder
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento
-      .addOrderBy('artist.name', 'ASC'); // Ordenar por nombre del artista
+      .orderBy('disc.releaseDate', 'DESC')
+      .addOrderBy('artist.name', 'ASC');
 
     const { entities: rates, raw } = await queryBuilder.getRawAndEntities();
 
-    // Procesar las entidades para incluir valores calculados
+    // Procesar los resultados para incluir el ID del favorito
     const processedRates = rates.map((rate, index) => ({
       ...rate,
       disc: {
@@ -127,15 +126,22 @@ export class RatesService {
         },
         averageRate: parseFloat(raw[index].averageRate) || null,
         averageCover: parseFloat(raw[index].averageCover) || null,
+        favoriteId: raw[index].favoriteId || null, // Agregar el ID del favorito si existe
       },
     }));
 
-    // Obtener el total de elementos para la paginación
+    // Obtener el total de elementos
     const totalItemsQueryBuilder = this.rateRepository
       .createQueryBuilder('rate')
       .leftJoin('rate.disc', 'disc')
       .leftJoin('disc.artist', 'artist')
       .leftJoin('disc.genre', 'genre')
+      .leftJoin(
+        'favorite',
+        'favorite',
+        'favorite.discId = disc.id AND favorite.userId = :userId',
+        { userId },
+      )
       .where('rate.userId = :userId', { userId });
 
     if (startDate && endDate) {

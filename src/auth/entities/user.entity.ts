@@ -1,4 +1,6 @@
 import { Asignation } from 'src/asignations/entities/asignations.entity';
+import { Favorite } from 'src/favorites/entities/favorite.entity';
+import { Pending } from 'src/pendings/entities/pending.entity';
 import { Rate } from 'src/rates/entities/rate.entity';
 import {
   BeforeInsert,
@@ -38,6 +40,12 @@ export class User {
 
   @OneToMany(() => Rate, (rate) => rate.user, { cascade: true })
   rate: Rate;
+
+  @OneToMany(() => Favorite, (favorite) => favorite.user, { cascade: true })
+  favorite: Favorite;
+
+  @OneToMany(() => Pending, (pending) => pending.user, { cascade: true })
+  pending: Pending;
 
   @OneToMany(() => Asignation, (asignation) => asignation.user, {
     cascade: true,
