@@ -49,7 +49,14 @@ export class RatesService {
   }
 
   async findAllByUser(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
+    const {
+      limit = 10,
+      offset = 0,
+      query,
+      dateRange,
+      genre,
+      type,
+    } = paginationDto;
     const userId = user.id;
 
     let startDate: Date | undefined;
@@ -87,8 +94,11 @@ export class RatesService {
       );
     }
 
-    if (genre) {
-      queryBuilder.andWhere('disc.genreId = :genre', { genre });
+    // **Filtrar según el valor de "genre" en paginationDto**
+    if (type === 'rate') {
+      queryBuilder.andWhere('rate.rate IS NOT NULL');
+    } else if (type === 'cover') {
+      queryBuilder.andWhere('rate.cover IS NOT NULL');
     }
 
     // Cálculo de promedios
