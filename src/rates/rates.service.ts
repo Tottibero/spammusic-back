@@ -79,13 +79,6 @@ export class RatesService {
       .addSelect('favorite.id', 'favoriteId') // Obtener el ID del favorito
       .where('rate.userId = :userId', { userId });
 
-    // **Filtrar según el valor de "genre" en paginationDto**
-    if (type === 'rate') {
-      queryBuilder.andWhere('rate.rate IS NOT NULL');
-    } else if (type === 'cover') {
-      queryBuilder.andWhere('rate.cover IS NOT NULL');
-    }
-
     // Cálculo de promedios
     queryBuilder
       .addSelect((subQuery) => {
@@ -138,6 +131,15 @@ export class RatesService {
         { userId },
       )
       .where('rate.userId = :userId', { userId });
+
+    // **Filtrar según el valor de "genre" en paginationDto**
+    if (type === 'rate') {
+      queryBuilder.andWhere('rate.rate IS NOT NULL');
+      totalItemsQueryBuilder.andWhere('rate.rate IS NOT NULL');
+    } else if (type === 'cover') {
+      queryBuilder.andWhere('rate.cover IS NOT NULL');
+      totalItemsQueryBuilder.andWhere('rate.cover IS NOT NULL');
+    }
 
     if (startDate && endDate) {
       queryBuilder.andWhere(
