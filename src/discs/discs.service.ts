@@ -73,29 +73,6 @@ export class DiscsService {
       }, 'averageCover')
       .where('disc.releaseDate <= :today', { today });
 
-    // Aplica el filtro de mes si está definido
-    if (startDate && endDate) {
-      queryBuilder.andWhere(
-        'disc.releaseDate BETWEEN :startDate AND :endDate',
-        {
-          startDate,
-          endDate,
-        },
-      );
-    }
-
-    if (query) {
-      const search = `%${query}%`;
-      queryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
-        { search },
-      );
-    }
-
-    if (genre) {
-      queryBuilder.andWhere('disc.genreId = :genre', { genre });
-    }
-
     queryBuilder
       .take(limit)
       .skip(offset)
@@ -118,7 +95,31 @@ export class DiscsService {
       .leftJoin('disc.genre', 'genre') // Incluye también otras relaciones si se usan en los filtros
       .where('disc.releaseDate <= :today', { today });
 
+    if (genre) {
+      queryBuilder.andWhere('disc.genreId = :genre', { genre });
+      totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    if (query) {
+      const search = `%${query}%`;
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+      totalItemsQueryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
     if (startDate && endDate) {
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        {
+          startDate,
+          endDate,
+        },
+      );
       totalItemsQueryBuilder.andWhere(
         'disc.releaseDate BETWEEN :startDate AND :endDate',
         {

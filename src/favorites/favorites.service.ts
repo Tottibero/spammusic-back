@@ -73,19 +73,6 @@ export class FavoritesService {
       .addSelect('rate.cover', 'userCover') // Valor del cover
       .where('favorite.userId = :userId', { userId });
 
-    if (startDate && endDate) {
-      queryBuilder.andWhere('disc.releaseDate BETWEEN :startDate AND :endDate', { startDate, endDate });
-    }
-
-    if (query) {
-      const search = `%${query}%`;
-      queryBuilder.andWhere('(disc.name ILIKE :search OR artist.name ILIKE :search)', { search });
-    }
-
-    if (genre) {
-      queryBuilder.andWhere('disc.genreId = :genre', { genre });
-    }
-
     // Cálculo de promedios
     queryBuilder
       .addSelect((subQuery) => {
@@ -144,15 +131,30 @@ export class FavoritesService {
       .where('favorite.userId = :userId', { userId });
 
     if (startDate && endDate) {
-      totalItemsQueryBuilder.andWhere('disc.releaseDate BETWEEN :startDate AND :endDate', { startDate, endDate });
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        { startDate, endDate },
+      );
+      totalItemsQueryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        { startDate, endDate },
+      );
     }
 
     if (query) {
       const search = `%${query}%`;
-      totalItemsQueryBuilder.andWhere('(disc.name ILIKE :search OR artist.name ILIKE :search)', { search });
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+      totalItemsQueryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
     }
 
     if (genre) {
+      queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 

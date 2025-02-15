@@ -79,21 +79,6 @@ export class RatesService {
       .addSelect('favorite.id', 'favoriteId') // Obtener el ID del favorito
       .where('rate.userId = :userId', { userId });
 
-    if (startDate && endDate) {
-      queryBuilder.andWhere(
-        'disc.releaseDate BETWEEN :startDate AND :endDate',
-        { startDate, endDate },
-      );
-    }
-
-    if (query) {
-      const search = `%${query}%`;
-      queryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
-        { search },
-      );
-    }
-
     // **Filtrar según el valor de "genre" en paginationDto**
     if (type === 'rate') {
       queryBuilder.andWhere('rate.rate IS NOT NULL');
@@ -155,6 +140,10 @@ export class RatesService {
       .where('rate.userId = :userId', { userId });
 
     if (startDate && endDate) {
+      queryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        { startDate, endDate },
+      );
       totalItemsQueryBuilder.andWhere(
         'disc.releaseDate BETWEEN :startDate AND :endDate',
         { startDate, endDate },
@@ -163,6 +152,10 @@ export class RatesService {
 
     if (query) {
       const search = `%${query}%`;
+      queryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
       totalItemsQueryBuilder.andWhere(
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
@@ -170,6 +163,7 @@ export class RatesService {
     }
 
     if (genre) {
+      queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
