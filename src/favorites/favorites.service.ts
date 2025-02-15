@@ -88,34 +88,6 @@ export class FavoritesService {
           .where('rate.discId = disc.id');
       }, 'averageCover');
 
-    queryBuilder
-      .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC')
-      .addOrderBy('artist.name', 'ASC');
-
-    const { entities: favorites, raw } = await queryBuilder.getRawAndEntities();
-
-    // Procesar los resultados para incluir los rates y promedios si existen
-    const processedFavorites = favorites.map((favorite, index) => ({
-      ...favorite,
-      disc: {
-        ...favorite.disc,
-        userFavorite: {
-          id: favorite.id, // ID del favorito
-        },
-        userRate: raw[index].rateId
-          ? {
-              id: raw[index].rateId,
-              rate: raw[index].userRate,
-              cover: raw[index].userCover,
-            }
-          : null, // Si no tiene rate, enviamos null
-        averageRate: parseFloat(raw[index].averageRate) || null,
-        averageCover: parseFloat(raw[index].averageCover) || null,
-      },
-    }));
-
     // Obtener el total de elementos
     const totalItemsQueryBuilder = this.favoriteRepository
       .createQueryBuilder('favorite')
@@ -157,6 +129,34 @@ export class FavoritesService {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
+
+    queryBuilder
+      .take(limit)
+      .skip(offset)
+      .orderBy('disc.releaseDate', 'DESC')
+      .addOrderBy('artist.name', 'ASC');
+
+    const { entities: favorites, raw } = await queryBuilder.getRawAndEntities();
+
+    // Procesar los resultados para incluir los rates y promedios si existen
+    const processedFavorites = favorites.map((favorite, index) => ({
+      ...favorite,
+      disc: {
+        ...favorite.disc,
+        userFavorite: {
+          id: favorite.id, // ID del favorito
+        },
+        userRate: raw[index].rateId
+          ? {
+              id: raw[index].rateId,
+              rate: raw[index].userRate,
+              cover: raw[index].userCover,
+            }
+          : null, // Si no tiene rate, enviamos null
+        averageRate: parseFloat(raw[index].averageRate) || null,
+        averageCover: parseFloat(raw[index].averageCover) || null,
+      },
+    }));
 
     const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);

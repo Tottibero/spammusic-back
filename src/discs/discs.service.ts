@@ -73,22 +73,6 @@ export class DiscsService {
       }, 'averageCover')
       .where('disc.releaseDate <= :today', { today });
 
-    queryBuilder
-      .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento (descendente)
-      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por nombre del artista (ascendente)
-
-    const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
-    // Mapea los valores crudos de averageRate y averageCover a las entidades
-    const processedDiscs = discs.map((disc, index) => ({
-      ...disc,
-      userRate: disc.rates.length > 0 ? disc.rates[0] : null,
-      averageRate: parseFloat(raw[index].averageRate) || null,
-      averageCover: parseFloat(raw[index].averageCover) || null,
-      favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
-    }));
-
     const totalItemsQueryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.artist', 'artist') // Asegúrate de incluir las mismas uniones
@@ -136,6 +120,22 @@ export class DiscsService {
         { search },
       );
     }
+
+    queryBuilder
+      .take(limit)
+      .skip(offset)
+      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento (descendente)
+      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por nombre del artista (ascendente)
+
+    const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
+    // Mapea los valores crudos de averageRate y averageCover a las entidades
+    const processedDiscs = discs.map((disc, index) => ({
+      ...disc,
+      userRate: disc.rates.length > 0 ? disc.rates[0] : null,
+      averageRate: parseFloat(raw[index].averageRate) || null,
+      averageCover: parseFloat(raw[index].averageCover) || null,
+      favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
+    }));
 
     const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);

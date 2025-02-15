@@ -94,31 +94,6 @@ export class RatesService {
           .where('rate.discId = disc.id');
       }, 'averageCover');
 
-    queryBuilder
-      .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC')
-      .addOrderBy('artist.name', 'ASC');
-
-    const { entities: rates, raw } = await queryBuilder.getRawAndEntities();
-
-    // Procesar los resultados para incluir el ID del favorito
-    const processedRates = rates.map((rate, index) => ({
-      ...rate,
-      disc: {
-        ...rate.disc,
-        userRate: {
-          rate: rate.rate,
-          cover: rate.cover,
-          id: rate.id,
-        },
-        averageRate: parseFloat(raw[index].averageRate) || null,
-        averageCover: parseFloat(raw[index].averageCover) || null,
-        favoriteId: raw[index].favoriteId || null, // Agregar el ID del favorito si existe
-      },
-    }));
-
-    // Obtener el total de elementos
     const totalItemsQueryBuilder = this.rateRepository
       .createQueryBuilder('rate')
       .leftJoin('rate.disc', 'disc')
@@ -132,7 +107,6 @@ export class RatesService {
       )
       .where('rate.userId = :userId', { userId });
 
-    // **Filtrar según el valor de "genre" en paginationDto**
     if (type === 'rate') {
       queryBuilder.andWhere('rate.rate IS NOT NULL');
       totalItemsQueryBuilder.andWhere('rate.rate IS NOT NULL');
@@ -168,6 +142,34 @@ export class RatesService {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
+
+    queryBuilder
+      .take(limit)
+      .skip(offset)
+      .orderBy('disc.releaseDate', 'DESC')
+      .addOrderBy('artist.name', 'ASC');
+
+    const { entities: rates, raw } = await queryBuilder.getRawAndEntities();
+
+    // Procesar los resultados para incluir el ID del favorito
+    const processedRates = rates.map((rate, index) => ({
+      ...rate,
+      disc: {
+        ...rate.disc,
+        userRate: {
+          rate: rate.rate,
+          cover: rate.cover,
+          id: rate.id,
+        },
+        averageRate: parseFloat(raw[index].averageRate) || null,
+        averageCover: parseFloat(raw[index].averageCover) || null,
+        favoriteId: raw[index].favoriteId || null, // Agregar el ID del favorito si existe
+      },
+    }));
+
+    // Obtener el total de elementos
+
+    // **Filtrar según el valor de "genre" en paginationDto**
 
     const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);
