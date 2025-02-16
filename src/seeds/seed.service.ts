@@ -21,7 +21,6 @@ export class SeedService {
     await this.seedUsers();
     await this.seedGenres();
     await this.seedCountries();
-    console.log('Seed executed successfully');
   }
 
   private async seedUsers(): Promise<void> {

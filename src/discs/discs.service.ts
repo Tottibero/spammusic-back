@@ -14,6 +14,7 @@ import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { Genre } from 'src/genres/entities/genre.entity';
 import { Artist } from 'src/artists/entities/artist.entity';
+import { Pending } from 'src/pendings/entities/pending.entity';
 @Injectable()
 export class DiscsService {
   private readonly logger = new Logger('DiscsService');
@@ -58,6 +59,14 @@ export class DiscsService {
         'favorite',
         'favorite.userId = :userId',
         { userId },
+      )
+      .leftJoinAndSelect(
+        'disc.pendings',
+        'pending',
+        'pending.userId = :userId',
+        {
+          userId,
+        },
       )
       .addSelect((subQuery) => {
         return subQuery
@@ -129,12 +138,15 @@ export class DiscsService {
 
     const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
     // Mapea los valores crudos de averageRate y averageCover a las entidades
+
     const processedDiscs = discs.map((disc, index) => ({
       ...disc,
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
       averageRate: parseFloat(raw[index].averageRate) || null,
       averageCover: parseFloat(raw[index].averageCover) || null,
       favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
+      pendingId:
+        disc.pendings && disc.pendings.length > 0 ? disc.pendings[0].id : null,
     }));
 
     const totalItems = await totalItemsQueryBuilder.getCount();
@@ -170,12 +182,15 @@ export class DiscsService {
         'favorite',
         'favorite.userId = :userId',
         { userId },
+      )
+      .leftJoinAndSelect(
+        'disc.favorites',
+        'favorite',
+        'favorite.userId = :userId',
+        { userId },
       );
 
-    console.log('query', query);
-
     if (query) {
-      console.log('query', query);
       const search = `%${query}%`;
       queryBuilder.andWhere(
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
@@ -336,6 +351,7 @@ export class DiscsService {
       COALESCE(AVG(r.cover), 0) AS "averageCover", 
       (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
       (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
+      (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
       (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
       (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
       ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
@@ -345,6 +361,7 @@ export class DiscsService {
     LEFT JOIN genre g ON d."genreId" = g.id
     LEFT JOIN rate r ON d.id = r."discId"
     LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
+    LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
     GROUP BY d.id, a.name, g.name, g.color, f.id
     ORDER BY d.featured DESC, "weightedScore" DESC 
     LIMIT 12;
@@ -416,6 +433,7 @@ export class DiscsService {
           }
         : null,
       favoriteId: disc.userFavoriteId || null, // Enviar el ID del favorito si existe
+      pendingId: disc.pendingId || null, // Aquí debería aparecer `pendingId`
       averageRate: disc.averageRate !== null ? parseFloat(disc.averageRate) : 0,
       averageCover:
         disc.averageCover !== null ? parseFloat(disc.averageCover) : 0,

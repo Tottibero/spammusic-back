@@ -20,7 +20,6 @@ export class PendingsService {
   constructor(
     @InjectRepository(Pending)
     private readonly pendingRepository: Repository<Pending>,
-    // private readonly discRespository: Repository<Disc>,
   ) {}
 
   async create(createPendingDto: CreatePendingDto, user: User) {
@@ -37,7 +36,7 @@ export class PendingsService {
       const pending = this.pendingRepository.create({
         ...pendingData,
         user,
-        disc, // Asignar la entidad Disc encontrada
+        disc, // Se asigna la entidad Disc encontrada
       });
 
       await this.pendingRepository.save(pending);
@@ -51,32 +50,59 @@ export class PendingsService {
     const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
     const userId = user.id;
 
-    // Definir rango de fechas si se proporciona
+    // Manejo del rango de fechas
     let startDate: Date | undefined;
     let endDate: Date | undefined;
     if (dateRange && dateRange.length === 2) {
       [startDate, endDate] = dateRange;
     }
 
+    // Construimos el query para los pendings y añadimos los joins similares a FavoritesService
     const queryBuilder = this.pendingRepository
       .createQueryBuilder('pending')
-      .leftJoinAndSelect('pending.disc', 'disc') // Relación con los discos
-      .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
-      .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
-      .where('pending.userId = :userId', { userId }); // Filtrar por usuario
+      .leftJoinAndSelect('pending.disc', 'disc')
+      .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('disc.genre', 'genre')
+      .leftJoin(
+        'rate',
+        'rate',
+        'rate.discId = disc.id AND rate.userId = :userId',
+        { userId },
+      )
+      .leftJoinAndSelect(
+        'disc.favorites',
+        'favorite',
+        'favorite.userId = :userId',
+        { userId },
+      )
+      .addSelect('rate.id', 'rateId')
+      .addSelect('rate.rate', 'userRate')
+      .addSelect('rate.cover', 'userCover')
+      .where('pending.userId = :userId', { userId });
 
-    // Aplicar filtro de rango de fechas
+    // Subconsultas para promedios (rate y cover)
+    queryBuilder
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.rate)', 'averageRate')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageRate')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('AVG(rate.cover)', 'averageCover')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'averageCover');
+
+    // Filtros según fecha, búsqueda y género
     if (startDate && endDate) {
       queryBuilder.andWhere(
         'disc.releaseDate BETWEEN :startDate AND :endDate',
-        {
-          startDate,
-          endDate,
-        },
+        { startDate, endDate },
       );
     }
 
-    // Aplicar filtro de búsqueda
     if (query) {
       const search = `%${query}%`;
       queryBuilder.andWhere(
@@ -85,34 +111,45 @@ export class PendingsService {
       );
     }
 
-    // Aplicar filtro de género
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
-    // Aplicar paginación
     queryBuilder
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento
-      .addOrderBy('artist.name', 'ASC'); // Ordenar por nombre del artista
+      .orderBy('disc.releaseDate', 'DESC')
+      .addOrderBy('artist.name', 'ASC');
 
     const { entities: pendings, raw } = await queryBuilder.getRawAndEntities();
 
-    // Procesar las entidades para incluir valores calculados
+    // Procesamos los resultados para incluir los datos de rate y el detalle del pending
     const processedPendings = pendings.map((pending, index) => ({
       ...pending,
       disc: {
         ...pending.disc,
-        userPending: {
-          id: pending.id,
-        },
-        averagePending: parseFloat(raw[index].averagePending) || null,
-        averageCover: parseFloat(raw[index].averageCover) || null,
+        userPending: pending.id,
+        userRate: raw[index].rateId
+          ? {
+              id: raw[index].rateId,
+              rate: raw[index].userRate,
+              cover: raw[index].userCover,
+            }
+          : null,
+        averageRate: raw[index].averageRate
+          ? parseFloat(raw[index].averageRate)
+          : null,
+        averageCover: raw[index].averageCover
+          ? parseFloat(raw[index].averageCover)
+          : null,
+        favoriteId:
+          pending.disc.favorites.length > 0
+            ? pending.disc.favorites[0].id
+            : null, // Enviar el ID del favorito si existe
       },
     }));
 
-    // Obtener el total de elementos para la paginación
+    // Construimos el query para obtener el total de elementos
     const totalItemsQueryBuilder = this.pendingRepository
       .createQueryBuilder('pending')
       .leftJoin('pending.disc', 'disc')
@@ -170,7 +207,6 @@ export class PendingsService {
   }
 
   private handleDbExceptions(error: any) {
-    // Ej. error.code === '23505' en postgres para entradas duplicadas
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);
     }

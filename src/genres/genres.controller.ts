@@ -27,7 +27,6 @@ export class GenresController {
   bulkCreate(
     @Body() createGenresArray: { genres: { name: string; color: string }[] },
   ) {
-    console.log('bulkCreateGenres', createGenresArray);
     return this.unitsService.bulkCreate(createGenresArray);
   }
 

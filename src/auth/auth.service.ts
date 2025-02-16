@@ -58,7 +58,6 @@ export class AuthService {
 
     if (!bcrypt.compareSync(password, user.password))
       throw new UnauthorizedException('Credentials are not valid! pass');
-    console.log(user);
     return {
       ...user,
       token: this.getJwtToken({

@@ -13,6 +13,7 @@ import { Rate } from './entities/rate.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
+import { Pending } from 'src/pendings/entities/pending.entity';
 
 @Injectable()
 export class RatesService {
@@ -71,12 +72,19 @@ export class RatesService {
       .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
       .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
       .leftJoin(
+        Pending,
+        'pending',
+        'pending.discId = disc.id AND pending.userId = :userId',
+        { userId },
+      )
+      .leftJoin(
         'favorite',
         'favorite',
         'favorite.discId = disc.id AND favorite.userId = :userId',
         { userId },
       ) // Relación con los favoritos del usuario
       .addSelect('favorite.id', 'favoriteId') // Obtener el ID del favorito
+      .addSelect('pending.id', 'pendingId')
       .where('rate.userId = :userId', { userId });
 
     // Cálculo de promedios
@@ -164,6 +172,7 @@ export class RatesService {
         averageRate: parseFloat(raw[index].averageRate) || null,
         averageCover: parseFloat(raw[index].averageCover) || null,
         favoriteId: raw[index].favoriteId || null, // Agregar el ID del favorito si existe
+        pendingId: raw[index].pendingId || null,
       },
     }));
 

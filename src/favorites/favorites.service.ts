@@ -12,6 +12,8 @@ import { Favorite } from './entities/favorite.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
+// Importamos la entidad Pending para poder hacer el join
+import { Pending } from 'src/pendings/entities/pending.entity';
 
 @Injectable()
 export class FavoritesService {
@@ -20,7 +22,6 @@ export class FavoritesService {
   constructor(
     @InjectRepository(Favorite)
     private readonly favoriteRepository: Repository<Favorite>,
-    // private readonly discRespository: Repository<Disc>,
   ) {}
 
   async create(createFavoriteDto: CreateFavoriteDto, user: User) {
@@ -37,7 +38,7 @@ export class FavoritesService {
       const favorite = this.favoriteRepository.create({
         ...favoriteData,
         user,
-        disc, // Asignar la entidad Disc encontrada
+        disc, // Se asigna la entidad Disc encontrada
       });
 
       await this.favoriteRepository.save(favorite);
@@ -51,29 +52,38 @@ export class FavoritesService {
     const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
     const userId = user.id;
 
+    // Manejo del rango de fechas
     let startDate: Date | undefined;
     let endDate: Date | undefined;
     if (dateRange && dateRange.length === 2) {
       [startDate, endDate] = dateRange;
     }
 
+    // Construimos el query para los favorites y añadimos el join con pending
     const queryBuilder = this.favoriteRepository
       .createQueryBuilder('favorite')
-      .leftJoinAndSelect('favorite.disc', 'disc') // Relación con los discos
-      .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
-      .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
+      .leftJoinAndSelect('favorite.disc', 'disc')
+      .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('disc.genre', 'genre')
       .leftJoin(
         'rate',
         'rate',
         'rate.discId = disc.id AND rate.userId = :userId',
         { userId },
-      ) // Relación con los rates del usuario
-      .addSelect('rate.id', 'rateId') // ID del rate
-      .addSelect('rate.rate', 'userRate') // Valor del rate
-      .addSelect('rate.cover', 'userCover') // Valor del cover
+      )
+      .leftJoin(
+        Pending,
+        'pending',
+        'pending.discId = disc.id AND pending.userId = :userId',
+        { userId },
+      )
+      .addSelect('rate.id', 'rateId')
+      .addSelect('rate.rate', 'userRate')
+      .addSelect('rate.cover', 'userCover')
+      .addSelect('pending.id', 'pendingId')
       .where('favorite.userId = :userId', { userId });
 
-    // Cálculo de promedios
+    // Subqueries para cálculos de promedios (en caso de necesitarse)
     queryBuilder
       .addSelect((subQuery) => {
         return subQuery
@@ -88,26 +98,9 @@ export class FavoritesService {
           .where('rate.discId = disc.id');
       }, 'averageCover');
 
-    // Obtener el total de elementos
-    const totalItemsQueryBuilder = this.favoriteRepository
-      .createQueryBuilder('favorite')
-      .leftJoin('favorite.disc', 'disc')
-      .leftJoin('disc.artist', 'artist')
-      .leftJoin('disc.genre', 'genre')
-      .leftJoin(
-        'rate',
-        'rate',
-        'rate.discId = disc.id AND rate.userId = :userId',
-        { userId },
-      )
-      .where('favorite.userId = :userId', { userId });
-
+    // Filtros según el rango de fechas, búsqueda y género
     if (startDate && endDate) {
       queryBuilder.andWhere(
-        'disc.releaseDate BETWEEN :startDate AND :endDate',
-        { startDate, endDate },
-      );
-      totalItemsQueryBuilder.andWhere(
         'disc.releaseDate BETWEEN :startDate AND :endDate',
         { startDate, endDate },
       );
@@ -119,15 +112,10 @@ export class FavoritesService {
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
       );
-      totalItemsQueryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
-        { search },
-      );
     }
 
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
-      totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
     queryBuilder
@@ -138,25 +126,63 @@ export class FavoritesService {
 
     const { entities: favorites, raw } = await queryBuilder.getRawAndEntities();
 
-    // Procesar los resultados para incluir los rates y promedios si existen
+    // Procesamos los resultados para incluir la información de rate y pending
     const processedFavorites = favorites.map((favorite, index) => ({
       ...favorite,
       disc: {
         ...favorite.disc,
-        userFavorite: {
-          id: favorite.id, // ID del favorito
-        },
+        userFavorite: { id: favorite.id },
         userRate: raw[index].rateId
           ? {
               id: raw[index].rateId,
               rate: raw[index].userRate,
               cover: raw[index].userCover,
             }
-          : null, // Si no tiene rate, enviamos null
+          : null,
+        userPending: raw[index].pendingId ? { id: raw[index].pendingId } : null,
         averageRate: parseFloat(raw[index].averageRate) || null,
         averageCover: parseFloat(raw[index].averageCover) || null,
       },
     }));
+
+    // Construimos el query para obtener el total de elementos
+    const totalItemsQueryBuilder = this.favoriteRepository
+      .createQueryBuilder('favorite')
+      .leftJoin('favorite.disc', 'disc')
+      .leftJoin('disc.artist', 'artist')
+      .leftJoin('disc.genre', 'genre')
+      .leftJoin(
+        'rate',
+        'rate',
+        'rate.discId = disc.id AND rate.userId = :userId',
+        { userId },
+      )
+      .leftJoin(
+        Pending,
+        'pending',
+        'pending.discId = disc.id AND pending.userId = :userId',
+        { userId },
+      )
+      .where('favorite.userId = :userId', { userId });
+
+    if (startDate && endDate) {
+      totalItemsQueryBuilder.andWhere(
+        'disc.releaseDate BETWEEN :startDate AND :endDate',
+        { startDate, endDate },
+      );
+    }
+
+    if (query) {
+      const search = `%${query}%`;
+      totalItemsQueryBuilder.andWhere(
+        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        { search },
+      );
+    }
+
+    if (genre) {
+      totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
 
     const totalItems = await totalItemsQueryBuilder.getCount();
     const totalPages = Math.ceil(totalItems / limit);
@@ -170,6 +196,7 @@ export class FavoritesService {
       data: processedFavorites,
     };
   }
+
   async findOne(id: string): Promise<Favorite> {
     try {
       const favorite = await this.favoriteRepository.findOneByOrFail({ id });
@@ -188,7 +215,7 @@ export class FavoritesService {
   }
 
   private handleDbExceptions(error: any) {
-    // Ej. error.code === '23505' en postgres para entradas duplicadas
+    // Por ejemplo, error.code === '23505' en PostgreSQL para entradas duplicadas
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);
     }
