@@ -184,10 +184,12 @@ export class DiscsService {
         { userId },
       )
       .leftJoinAndSelect(
-        'disc.favorites',
-        'favorite',
-        'favorite.userId = :userId',
-        { userId },
+        'disc.pendings',
+        'pending',
+        'pending.userId = :userId',
+        {
+          userId,
+        },
       );
 
     if (query) {
@@ -232,6 +234,10 @@ export class DiscsService {
         ...disc,
         userRate: disc.rates.length > 0 ? disc.rates[0] : null,
         favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito
+        pendingId:
+          disc.pendings && disc.pendings.length > 0
+            ? disc.pendings[0].id
+            : null,
         asignations: disc.asignations.map((asignation) => ({
           id: asignation.id,
           done: asignation.done,
