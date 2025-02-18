@@ -370,7 +370,7 @@ export class DiscsService {
     LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
     GROUP BY d.id, a.name, g.name, g.color, f.id
     ORDER BY d.featured DESC, "weightedScore" DESC 
-    LIMIT 12;
+    LIMIT 20;
   `;
 
     const topRatedDiscs = await this.discRepository.query(query, [userId]);
