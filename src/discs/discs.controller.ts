@@ -34,8 +34,14 @@ export class DiscsController {
 
   @Auth()
   @Get('homeDiscs')
-  findTopRatedOrFeatured(@GetUser() user: User) {
-    return this.discsServices.findTopRatedOrFeaturedAndStats(user);
+  findTopRatedOrFeatured(
+    @Query() paginationDto: PaginationDto,
+    @GetUser() user: User,
+  ) {
+    return this.discsServices.findTopRatedOrFeaturedAndStats(
+      paginationDto,
+      user,
+    );
   }
 
   @Get()
