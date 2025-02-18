@@ -360,32 +360,34 @@ export class DiscsService {
 
     // --- Consulta principal de discos (ordenados por featured y weightedScore) ---
     const query = `
-      SELECT 
-        d.*, 
-        a.name AS "artistName", 
-        g.name AS "genreName", 
-        g.color AS "genreColor", 
-        COUNT(r.id) AS "voteCount", 
-        COALESCE(AVG(r.rate), 0) AS "averageRate", 
-        COALESCE(AVG(r.cover), 0) AS "averageCover", 
-        (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
-        (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
-        (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
-        (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
-        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
-        ((COALESCE(AVG(r.rate), 0) * COUNT(r.id)) + (${globalAvgRate} * ${medianVotes})) / 
-        (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
-      FROM disc d
-      LEFT JOIN artist a ON d."artistId" = a.id
-      LEFT JOIN genre g ON d."genreId" = g.id
-      LEFT JOIN rate r ON d.id = r."discId"
-      LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
-      LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
-      ${dateCondition}  
-      GROUP BY d.id, a.name, g.name, g.color, f.id
-      ORDER BY d.featured DESC, "weightedScore" DESC 
-      LIMIT 20;
-    `;
+    SELECT 
+      d.*, 
+      a.name AS "artistName", 
+      g.name AS "genreName", 
+      g.color AS "genreColor", 
+      COUNT(r.id) AS "voteCount", 
+      COALESCE(AVG(r.rate), 0) AS "averageRate", 
+      COALESCE(AVG(r.cover), 0) AS "averageCover", 
+      (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
+      (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
+      (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
+      (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
+      (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
+      (
+        (COALESCE(AVG(r.rate), 0) * COUNT(r.id)) 
+        + (${globalAvgRate} * ${medianVotes})
+      ) / (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
+    FROM disc d
+    LEFT JOIN artist a ON d."artistId" = a.id
+    LEFT JOIN genre g ON d."genreId" = g.id
+    LEFT JOIN rate r ON d.id = r."discId"
+    LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
+    LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
+    ${dateCondition}
+    GROUP BY d.id, a.name, g.name, g.color, f.id
+    ORDER BY "weightedScore" DESC
+    LIMIT 20;
+  `;
 
     // <== Aquí se usa el arreglo 'params' en lugar de [userId]
     const topRatedDiscs = await this.discRepository.query(query, params);
