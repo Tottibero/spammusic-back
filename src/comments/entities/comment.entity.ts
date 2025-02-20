@@ -33,7 +33,6 @@ export class Comment {
 
   @ManyToOne(() => Disc, (disc) => disc.comments, {
     onDelete: 'CASCADE',
-    eager: true,
   })
   disc: Disc;
 

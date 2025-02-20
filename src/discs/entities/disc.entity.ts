@@ -60,6 +60,6 @@ export class Disc {
   @OneToMany(() => Asignation, (asignation) => asignation.disc)
   asignations: Asignation[];
 
-  @OneToMany(() => Comment, (comment) => comment.disc)
+  @OneToMany(() => Comment, (comment) => comment.disc, { eager: true })
   comments: Comment[];
 }

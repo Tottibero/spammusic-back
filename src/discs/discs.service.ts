@@ -64,9 +64,7 @@ export class DiscsService {
         'disc.pendings',
         'pending',
         'pending.userId = :userId',
-        {
-          userId,
-        },
+        { userId },
       )
       .addSelect((subQuery) => {
         return subQuery
@@ -80,12 +78,19 @@ export class DiscsService {
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
       }, 'averageCover')
+      // Agrega el conteo de comentarios para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(comment.id)', 'commentCount')
+          .from('comment', 'comment')
+          .where('comment.discId = disc.id');
+      }, 'commentCount')
       .where('disc.releaseDate <= :today', { today });
 
     const totalItemsQueryBuilder = this.discRepository
       .createQueryBuilder('disc')
-      .leftJoin('disc.artist', 'artist') // Asegúrate de incluir las mismas uniones
-      .leftJoin('disc.genre', 'genre') // Incluye también otras relaciones si se usan en los filtros
+      .leftJoin('disc.artist', 'artist')
+      .leftJoin('disc.genre', 'genre')
       .where('disc.releaseDate <= :today', { today });
 
     if (genre) {
@@ -122,28 +127,21 @@ export class DiscsService {
       );
     }
 
-    if (query) {
-      const search = `%${query}%`;
-      totalItemsQueryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
-        { search },
-      );
-    }
-
     queryBuilder
       .take(limit)
       .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordenar por fecha de lanzamiento (descendente)
-      .addOrderBy('artist.name', 'ASC'); // Luego ordenar por nombre del artista (ascendente)
+      .orderBy('disc.releaseDate', 'DESC') // Ordena por fecha de lanzamiento (descendente)
+      .addOrderBy('artist.name', 'ASC'); // Luego ordena por nombre del artista (ascendente)
 
     const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
-    // Mapea los valores crudos de averageRate y averageCover a las entidades
 
+    // Mapea los valores crudos de averageRate, averageCover y commentCount a las entidades
     const processedDiscs = discs.map((disc, index) => ({
       ...disc,
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
       averageRate: parseFloat(raw[index].averageRate) || null,
       averageCover: parseFloat(raw[index].averageCover) || null,
+      commentCount: parseInt(raw[index].commentCount, 10) || 0,
       favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
       pendingId:
         disc.pendings && disc.pendings.length > 0 ? disc.pendings[0].id : null,
@@ -383,12 +381,13 @@ export class DiscsService {
         g.color AS "genreColor", 
         COUNT(r.id) AS "voteCount", 
         COALESCE(AVG(r.rate), 0) AS "averageRate", 
-        COALESCE(AVG(r.cover), 0) AS "averageCover", 
+        COALESCE(AVG(r.cover), 0) AS "averageCover",
         (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
         (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
         (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
         (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
         (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
+        (SELECT COUNT(c.id) FROM comment c WHERE c."discId" = d.id) AS "commentCount",
         (
           (COALESCE(AVG(r.rate), 0) * COUNT(r.id)) 
           + (${globalAvgRate} * ${medianVotes})
@@ -476,8 +475,8 @@ export class DiscsService {
       averageCover:
         disc.averageCover !== null ? parseFloat(disc.averageCover) : 0,
       voteCount: parseInt(disc.voteCount, 10) || 0,
+      commentCount: parseInt(disc.commentCount, 10) || 0,
     }));
-
 
     return {
       discs: processedDiscs,
