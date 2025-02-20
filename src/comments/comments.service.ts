@@ -181,15 +181,30 @@ export class CommentsService {
   }
 
   async remove(id: string) {
-    const comment = await this.commentRepository.findOne({ where: { id } });
+    // Se buscan las relaciones necesarias, por ejemplo, 'replies'
+    const comment = await this.commentRepository.findOne({
+      where: { id },
+      relations: ['replies'],
+    });
+
     if (!comment) {
       throw new NotFoundException(`Comment with id ${id} not found`);
     }
-    // Marca el comentario como eliminado y actualiza el contenido
-    comment.isDeleted = true;
-    comment.comment = 'Comentario eliminado';
-    await this.commentRepository.save(comment);
-    return { message: `Comment with id ${id} has been marked as deleted` };
+
+    // Verificamos si el comentario tiene respuestas
+    if (comment.replies && comment.replies.length > 0) {
+      // Tiene relaciones, se realiza soft delete
+      comment.isDeleted = true;
+      comment.comment = 'Comentario eliminado';
+      await this.commentRepository.save(comment);
+      return {
+        message: `Comment with id ${id} has been marked as deleted (soft delete)`,
+      };
+    } else {
+      // No tiene relaciones dependientes, se realiza hard delete
+      await this.commentRepository.delete(id);
+      return { message: `Comment with id ${id} has been permanently deleted` };
+    }
   }
 
   async findCommentsByDisc(discId: string): Promise<CommentResponseDto[]> {
