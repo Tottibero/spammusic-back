@@ -1,4 +1,10 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
 
@@ -14,4 +20,9 @@ export class Favorite {
     onDelete: 'CASCADE',
   })
   disc: Disc;
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn({ nullable: true })
+  editedAt: Date;
 }

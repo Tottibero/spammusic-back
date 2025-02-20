@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
 
@@ -9,6 +9,12 @@ export class Rate {
 
   @Column('decimal', { precision: 4, scale: 2, nullable: true })
   rate: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn({ nullable: true })
+  editedAt: Date;
 
   @Column('decimal', { precision: 4, scale: 2, nullable: true })
   cover: number;
