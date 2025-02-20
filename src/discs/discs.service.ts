@@ -327,6 +327,8 @@ export class DiscsService {
   }> {
     const userId = user.id;
     const { dateRange } = paginationDto;
+
+    // Parámetros y condición para la consulta principal (incluye userId)
     let dateCondition = '';
     const params: any[] = [userId]; // $1 será userId
 
@@ -337,7 +339,17 @@ export class DiscsService {
       params.push(new Date(endDate));
     }
 
-    // --- Cálculo de estadísticas globales ---
+    // --- Cálculo de estadísticas globales con filtro de fecha ---
+    // Para la consulta global no necesitamos el userId, así que definimos sus propios parámetros
+    let dateConditionGlobal = '';
+    const globalStatsParams: any[] = [];
+    if (dateRange && dateRange.length === 2) {
+      const [startDate, endDate] = dateRange;
+      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $1 AND $2`;
+      globalStatsParams.push(new Date(startDate));
+      globalStatsParams.push(new Date(endDate));
+    }
+
     const globalStatsQuery = `
       SELECT 
         AVG(avgRates) AS "globalAvgRate",
@@ -349,10 +361,14 @@ export class DiscsService {
           COALESCE(AVG(r.rate), 0) AS avgRates
         FROM disc d
         LEFT JOIN rate r ON d.id = r."discId"
+        ${dateConditionGlobal}
         GROUP BY d.id
       ) AS rate_stats;
     `;
-    const globalStatsResult = await this.discRepository.query(globalStatsQuery);
+    const globalStatsResult = await this.discRepository.query(
+      globalStatsQuery,
+      globalStatsParams,
+    );
     const { globalAvgRate: globalAvgRateStr, medianVotes: medianVotesStr } =
       globalStatsResult[0] || {};
     const globalAvgRate = parseFloat(globalAvgRateStr) || 0;
@@ -360,36 +376,35 @@ export class DiscsService {
 
     // --- Consulta principal de discos (ordenados por featured y weightedScore) ---
     const query = `
-    SELECT 
-      d.*, 
-      a.name AS "artistName", 
-      g.name AS "genreName", 
-      g.color AS "genreColor", 
-      COUNT(r.id) AS "voteCount", 
-      COALESCE(AVG(r.rate), 0) AS "averageRate", 
-      COALESCE(AVG(r.cover), 0) AS "averageCover", 
-      (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
-      (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
-      (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
-      (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
-      (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
-      (
-        (COALESCE(AVG(r.rate), 0) * COUNT(r.id)) 
-        + (${globalAvgRate} * ${medianVotes})
-      ) / (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
-    FROM disc d
-    LEFT JOIN artist a ON d."artistId" = a.id
-    LEFT JOIN genre g ON d."genreId" = g.id
-    LEFT JOIN rate r ON d.id = r."discId"
-    LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
-    LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
-    ${dateCondition}
-    GROUP BY d.id, a.name, g.name, g.color, f.id
-    ORDER BY "weightedScore" DESC
-    LIMIT 20;
-  `;
+      SELECT 
+        d.*, 
+        a.name AS "artistName", 
+        g.name AS "genreName", 
+        g.color AS "genreColor", 
+        COUNT(r.id) AS "voteCount", 
+        COALESCE(AVG(r.rate), 0) AS "averageRate", 
+        COALESCE(AVG(r.cover), 0) AS "averageCover", 
+        (SELECT r.id FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRateId",
+        (SELECT f.id FROM favorite f WHERE f."discId" = d.id AND f."userId" = $1 LIMIT 1) AS "userFavoriteId",
+        (SELECT p.id FROM pending p WHERE p."discId" = d.id AND p."userId" = $1 LIMIT 1) AS "pendingId",
+        (SELECT r.rate FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userRate",
+        (SELECT r.cover FROM rate r WHERE r."discId" = d.id AND r."userId" = $1 LIMIT 1) AS "userCover",
+        (
+          (COALESCE(AVG(r.rate), 0) * COUNT(r.id)) 
+          + (${globalAvgRate} * ${medianVotes})
+        ) / (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
+      FROM disc d
+      LEFT JOIN artist a ON d."artistId" = a.id
+      LEFT JOIN genre g ON d."genreId" = g.id
+      LEFT JOIN rate r ON d.id = r."discId"
+      LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
+      LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
+      ${dateCondition}
+      GROUP BY d.id, a.name, g.name, g.color, f.id
+      ORDER BY "weightedScore" DESC
+      LIMIT 20;
+    `;
 
-    // <== Aquí se usa el arreglo 'params' en lugar de [userId]
     const topRatedDiscs = await this.discRepository.query(query, params);
 
     // --- Otras estadísticas: total de discos y total de votos ---
@@ -463,14 +478,7 @@ export class DiscsService {
       voteCount: parseInt(disc.voteCount, 10) || 0,
     }));
 
-    console.log({
-      discs: processedDiscs,
-      totalDiscs,
-      totalVotes,
-      topUsersByRates,
-      topUsersByCover,
-      ratingDistribution,
-    });
+
     return {
       discs: processedDiscs,
       totalDiscs,

@@ -20,6 +20,7 @@ import { LinksModule } from './links/links.module';
 import { SeedModule } from './seeds/seed.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { PendingsModule } from './pendings/pendings.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { PendingsModule } from './pendings/pendings.module';
     SeedModule,
     FavoritesModule,
     PendingsModule,
+    CommentsModule,
   ],
 })
 export class AppModule {}

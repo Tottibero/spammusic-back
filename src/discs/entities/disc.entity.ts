@@ -11,6 +11,7 @@ import {
 import { Asignation } from 'src/asignations/entities/asignations.entity';
 import { Favorite } from 'src/favorites/entities/favorite.entity';
 import { Pending } from 'src/pendings/entities/pending.entity';
+import { Comment } from 'src/comments/entities/comment.entity';
 
 @Entity()
 export class Disc {
@@ -58,4 +59,7 @@ export class Disc {
 
   @OneToMany(() => Asignation, (asignation) => asignation.disc)
   asignations: Asignation[];
+
+  @OneToMany(() => Comment, (comment) => comment.disc)
+  comments: Comment[];
 }
