@@ -149,7 +149,7 @@ export class DiscsService {
       averageRate: parseFloat(raw[index].averageRate) || null,
       averageCover: parseFloat(raw[index].averageCover) || null,
       commentCount: parseInt(raw[index].commentCount, 10) || 0,
-      rateCount: parseInt(raw[index].rateCount, 10) || 0,
+      voteCount: parseInt(raw[index].rateCount, 10) || 0,  // <-- Add rateCount here
       favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
       pendingId:
         disc.pendings && disc.pendings.length > 0 ? disc.pendings[0].id : null,
