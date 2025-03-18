@@ -78,6 +78,13 @@ export class DiscsService {
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
       }, 'averageCover')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(rate.id)', 'rateCount')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id');
+      }, 'rateCount')
+      .where('disc.releaseDate <= :today', { today })
       // Agrega el conteo de comentarios para cada disco
       .addSelect((subQuery) => {
         return subQuery
@@ -142,6 +149,7 @@ export class DiscsService {
       averageRate: parseFloat(raw[index].averageRate) || null,
       averageCover: parseFloat(raw[index].averageCover) || null,
       commentCount: parseInt(raw[index].commentCount, 10) || 0,
+      rateCount: parseInt(raw[index].rateCount, 10) || 0,
       favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito si existe
       pendingId:
         disc.pendings && disc.pendings.length > 0 ? disc.pendings[0].id : null,
