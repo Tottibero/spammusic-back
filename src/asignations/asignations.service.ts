@@ -152,18 +152,12 @@ export class AsignationsService {
     const { limit = 100, offset = 0 } = paginationDto;
 
     try {
-      const queryBuilder = this.asignationRepository
-        .createQueryBuilder('asignation')
-        .leftJoinAndSelect('asignation.user', 'user')
-        .leftJoinAndSelect('asignation.disc', 'disc')
-        .leftJoinAndSelect('asignation.list', 'list')
-        .where('list.id = :listId', { listId })
-        // Ajustar la columna a ordenar según tu User Entity
-        .orderBy('user.username', 'ASC')
-        .skip(offset)
-        .take(limit);
-
-      const [asignations, totalItems] = await queryBuilder.getManyAndCount();
+      const [asignations, totalItems] =
+        await this.asignationRepository.findAndCount({
+          where: { list: { id: listId } }, // Filtra por listId en la relación
+          take: limit, // Límite de resultados
+          skip: offset, // Desplazamiento
+        });
 
       const totalPages = Math.ceil(totalItems / limit);
       const currentPage = Math.floor(offset / limit) + 1;
