@@ -155,6 +155,9 @@ export class AsignationsService {
       const [asignations, totalItems] =
         await this.asignationRepository.findAndCount({
           where: { list: { id: listId } }, // Filtra por listId en la relación
+          order: {
+            user: { username: 'ASC' }, // Ajustar columna de tu User
+          },
           take: limit, // Límite de resultados
           skip: offset, // Desplazamiento
         });
