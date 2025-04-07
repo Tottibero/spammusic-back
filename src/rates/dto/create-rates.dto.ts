@@ -17,7 +17,7 @@ export class CreateRateDto {
   rate: number;
 
   // Opcional, mismas validaciones que rate
-  @ValidateIf((o) => o.rate !== null && o.rate !== undefined)
+  @ValidateIf((o) => o.cover !== null && o.cover !== undefined)
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
