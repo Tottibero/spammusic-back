@@ -39,25 +39,28 @@ export class AsignationsService {
     const { userId, discId, listId, ...rest } = createAsignationDto;
 
     try {
-      // Buscar las entidades relacionadas
-      const user = await this.userRepository.findOneBy({ id: userId });
-      if (!user) throw new Error('User not found');
-
-      const disc = await this.discRepository.findOneBy({ id: discId });
-      if (!disc) throw new Error('Disc not found');
-
       const list = await this.listRepository.findOneBy({ id: listId });
       if (!list) throw new Error('List not found');
 
-      // Crear la asignación y asignar las relaciones
+      let user: User | undefined = undefined;
+      if (userId) {
+        user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) throw new Error('User not found');
+      }
+
+      let disc: Disc | undefined = undefined;
+      if (discId) {
+        disc = await this.discRepository.findOneBy({ id: discId });
+        if (!disc) throw new Error('Disc not found');
+      }
+
       const asignation = this.asignationRepository.create({
         ...rest,
-        user,
-        disc,
+        user: user || null,
+        disc: disc || null,
         list,
       });
 
-      // Guardar la asignación en la base de datos
       await this.asignationRepository.save(asignation);
 
       return asignation;

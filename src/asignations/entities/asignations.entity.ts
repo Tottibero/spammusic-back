@@ -11,12 +11,16 @@ export class Asignation {
   @Column('boolean', { nullable: true })
   done: boolean = false;
 
-  @ManyToOne(() => User, (user) => user.asignations, { eager: true })
+  @ManyToOne(() => User, (user) => user.asignations, {
+    eager: true,
+    nullable: true,
+  })
   user: User;
 
   @ManyToOne(() => Disc, (disc) => disc.asignations, {
     onDelete: 'CASCADE',
     eager: true,
+    nullable: true,
   })
   disc: Disc;
 
@@ -25,4 +29,7 @@ export class Asignation {
 
   @Column('int', { nullable: true })
   position: number;
+
+  @Column('text', { nullable: true })
+  description: string;
 }

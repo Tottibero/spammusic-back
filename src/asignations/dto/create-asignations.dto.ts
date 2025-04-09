@@ -1,4 +1,4 @@
-import { IsBoolean, IsNumber, IsOptional, IsUUID, ValidateIf } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
 
 export class CreateAsignationDto {
   @IsOptional()
@@ -6,10 +6,17 @@ export class CreateAsignationDto {
   done?: boolean;
 
   @IsUUID('4')
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   @IsUUID('4')
-  discId: string;
+  @IsOptional()
+  discId?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
 
   @IsUUID('4')
   listId: string;
