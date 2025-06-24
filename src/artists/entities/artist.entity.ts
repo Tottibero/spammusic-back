@@ -22,7 +22,7 @@ export class Artist {
   @Column('text', { nullable: true })
   image: string;
 
-  @ManyToOne(() => Country, (country) => country.artist)
+  @ManyToOne(() => Country, (country) => country.artist, { eager: true })
   country: Country;
 
   @OneToMany(() => Disc, (disc) => disc.artist)
