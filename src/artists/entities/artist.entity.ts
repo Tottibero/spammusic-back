@@ -3,6 +3,7 @@ import { Disc } from 'src/discs/entities/disc.entity';
 import {
   Column,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -22,8 +23,15 @@ export class Artist {
   @Column('text', { nullable: true })
   image: string;
 
-  @ManyToOne(() => Country, (country) => country.artist, { eager: true })
+  @ManyToOne(() => Country, (country) => country.artist, {
+    eager: true,
+    nullable: true, // si quieres permitir artistas sin país
+  })
+  @JoinColumn({ name: 'countryId' }) // <- necesario si defines el campo manual
   country: Country;
+
+  @Column({ nullable: true })
+  countryId: string;
 
   @OneToMany(() => Disc, (disc) => disc.artist)
   disc: Disc[];
