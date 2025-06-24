@@ -50,6 +50,7 @@ export class DiscsService {
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('artist.country', 'country')
       .leftJoinAndSelect('disc.genre', 'genre')
       .leftJoinAndSelect('disc.rates', 'rate', 'rate.userId = :userId', {
         userId,
@@ -176,6 +177,7 @@ export class DiscsService {
     const queryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoinAndSelect('disc.artist', 'artist')
+      .leftJoinAndSelect('artist.country', 'country')
       .leftJoinAndSelect('disc.genre', 'genre')
       .leftJoinAndSelect('disc.rates', 'rate', 'rate.userId = :userId', {
         userId,
