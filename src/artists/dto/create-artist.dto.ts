@@ -17,5 +17,5 @@ export class CreateArtistDto {
 
   @IsOptional()
   @IsUUID()
-  countryId: string;
+  countryId?: string;
 }

@@ -23,15 +23,15 @@ export class Artist {
   @Column('text', { nullable: true })
   image: string;
 
-  @ManyToOne(() => Country, (country) => country.artist, {
-    eager: true,
-    nullable: true, // si quieres permitir artistas sin país
-  })
-  @JoinColumn({ name: 'countryId' }) // <- necesario si defines el campo manual
-  country: Country;
-
   @Column({ nullable: true })
   countryId: string;
+
+  @ManyToOne(() => Country, (country) => country.artist, {
+    eager: true,
+    nullable: true,
+  })
+  @JoinColumn({ name: 'countryId' })
+  country: Country;
 
   @OneToMany(() => Disc, (disc) => disc.artist)
   disc: Disc[];

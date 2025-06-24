@@ -82,9 +82,11 @@ export class ArtistsService {
   }
 
   async update(id: string, updateArtistDto: UpdateArtistDto) {
+    const { countryId, ...rest } = updateArtistDto;
     const artist = await this.artistRepository.preload({
       id,
-      ...updateArtistDto,
+      ...rest,
+      country: countryId ? { id: countryId } : undefined, // 👈 clave
     });
 
     if (!artist) throw new NotFoundException(`Artist with id ${id} not found`);
@@ -102,6 +104,29 @@ export class ArtistsService {
       id,
     });
     return artist;
+  }
+
+  async removeArtistsWithoutDiscs(): Promise<Artist[]> {
+    // Primero, obtén todos los artistas sin discos
+    const artistsWithoutDiscs = await this.artistRepository
+      .createQueryBuilder('artist')
+      .leftJoinAndSelect('artist.disc', 'disc')
+      .where('disc.id IS NULL')
+      .getMany();
+
+    // Si no hay artistas sin discos, devolvemos un array vacío o puedes manejar la lógica que prefieras
+    if (!artistsWithoutDiscs.length) {
+      return [];
+    }
+
+    // Guardamos una copia de los artistas para devolverlos antes de eliminarlos
+    const deletedArtists = [...artistsWithoutDiscs];
+
+    // Removemos los artistas en bloque
+    await this.artistRepository.remove(artistsWithoutDiscs);
+
+    // Devolvemos la lista de los artistas que fueron borrados
+    return deletedArtists;
   }
 
   private handleDbExceptions(error: any) {
