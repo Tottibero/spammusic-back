@@ -71,6 +71,7 @@ export class RatesService {
       .leftJoinAndSelect('rate.disc', 'disc') // Relación con los discos
       .leftJoinAndSelect('disc.artist', 'artist') // Relación con los artistas
       .leftJoinAndSelect('disc.genre', 'genre') // Relación con los géneros
+      .leftJoinAndSelect('artist.country', 'country')
       .leftJoin(
         Pending,
         'pending',
@@ -100,7 +101,21 @@ export class RatesService {
           .select('AVG(rate.cover)', 'averageCover')
           .from('rate', 'rate')
           .where('rate.discId = disc.id');
-      }, 'averageCover');
+      }, 'averageCover')
+      // Agrega el conteo de votos para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(rate.id)', 'rateCount')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id AND rate.rate IS NOT NULL');
+      }, 'rateCount')
+      // Agrega el conteo de comentarios para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(comment.id)', 'commentCount')
+          .from('comment', 'comment')
+          .where('comment.discId = disc.id');
+      }, 'commentCount');
 
     const totalItemsQueryBuilder = this.rateRepository
       .createQueryBuilder('rate')
@@ -164,11 +179,17 @@ export class RatesService {
       ...rate,
       disc: {
         ...rate.disc,
+        artist: {
+          ...rate.disc.artist,
+          country: rate.disc.artist?.country || null,
+        },
         userRate: {
           rate: rate.rate,
           cover: rate.cover,
           id: rate.id,
         },
+        voteCount: parseInt(raw[index].rateCount, 10) || null,  
+        commentCount: parseInt(raw[index].commentCount, 10) || 0,       
         averageRate: parseFloat(raw[index].averageRate) || null,
         averageCover: parseFloat(raw[index].averageCover) || null,
         favoriteId: raw[index].favoriteId || null, // Agregar el ID del favorito si existe

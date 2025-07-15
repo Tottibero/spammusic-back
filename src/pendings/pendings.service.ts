@@ -63,6 +63,7 @@ export class PendingsService {
       .leftJoinAndSelect('pending.disc', 'disc')
       .leftJoinAndSelect('disc.artist', 'artist')
       .leftJoinAndSelect('disc.genre', 'genre')
+      .leftJoinAndSelect('artist.country', 'country')
       .leftJoin(
         'rate',
         'rate',
@@ -78,6 +79,20 @@ export class PendingsService {
       .addSelect('rate.id', 'rateId')
       .addSelect('rate.rate', 'userRate')
       .addSelect('rate.cover', 'userCover')
+      // Agrega el conteo de votos para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(rate.id)', 'rateCount')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id AND rate.rate IS NOT NULL');
+      }, 'rateCount')
+      // Agrega el conteo de comentarios para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(comment.id)', 'commentCount')
+          .from('comment', 'comment')
+          .where('comment.discId = disc.id');
+      }, 'commentCount')
       .where('pending.userId = :userId', { userId });
 
     // Subconsultas para promedios (rate y cover)
@@ -128,7 +143,13 @@ export class PendingsService {
       ...pending,
       disc: {
         ...pending.disc,
+        artist: {
+          ...pending.disc.artist,
+          country: pending.disc.artist?.country || null,
+        },
         userPending: pending.id,
+        voteCount: parseInt(raw[index].rateCount, 10) || null,    
+        commentCount: parseInt(raw[index].commentCount, 10) || 0,  
         userRate: raw[index].rateId
           ? {
               id: raw[index].rateId,

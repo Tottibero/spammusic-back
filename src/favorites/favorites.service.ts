@@ -65,6 +65,7 @@ export class FavoritesService {
       .leftJoinAndSelect('favorite.disc', 'disc')
       .leftJoinAndSelect('disc.artist', 'artist')
       .leftJoinAndSelect('disc.genre', 'genre')
+      .leftJoinAndSelect('artist.country', 'country')
       .leftJoin(
         'rate',
         'rate',
@@ -81,6 +82,20 @@ export class FavoritesService {
       .addSelect('rate.rate', 'userRate')
       .addSelect('rate.cover', 'userCover')
       .addSelect('pending.id', 'pendingId')
+      // Agrega el conteo de votos para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(rate.id)', 'rateCount')
+          .from('rate', 'rate')
+          .where('rate.discId = disc.id AND rate.rate IS NOT NULL');
+      }, 'rateCount')
+      // Agrega el conteo de comentarios para cada disco
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(comment.id)', 'commentCount')
+          .from('comment', 'comment')
+          .where('comment.discId = disc.id');
+      }, 'commentCount')
       .where('favorite.userId = :userId', { userId });
 
     // Subqueries para cálculos de promedios (en caso de necesitarse)
@@ -131,7 +146,13 @@ export class FavoritesService {
       ...favorite,
       disc: {
         ...favorite.disc,
+        artist: {
+          ...favorite.disc.artist,
+          country: favorite.disc.artist?.country || null,
+        },
         userFavorite: { id: favorite.id },
+        voteCount: parseInt(raw[index].rateCount, 10) || null,    
+        commentCount: parseInt(raw[index].commentCount, 10) || 0,
         userRate: raw[index].rateId
           ? {
               id: raw[index].rateId,
