@@ -84,6 +84,24 @@ export class AuthService {
     }
   }
 
+  async findAllRv() {
+    try {
+      const users = await this.userRepository
+        .createQueryBuilder('user')
+        .select(['user.id', 'user.username', 'user.email', 'user.roles'])
+        .where(':role = ANY(user.roles)', { role: 'riffValley' }) // replace 'admin' with your role
+        .getMany();
+
+      // Opcional: si no quieres devolver la contraseña u otros datos sensibles
+      return users.map((user) => {
+        delete user.password;
+        return user;
+      });
+    } catch (error) {
+      this.handleDBerrors(error);
+    }
+  }
+
   async findOne(id: string): Promise<User> {
     try {
       const unit = await this.userRepository.findOneByOrFail({ id });
