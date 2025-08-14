@@ -146,6 +146,13 @@ export class DiscsService {
     // Mapea los valores crudos de averageRate, averageCover y commentCount a las entidades
     const processedDiscs = discs.map((disc, index) => ({
       ...disc,
+      artist: {
+        ...disc.artist,
+        country: {
+            ...disc.artist.country,
+            name: disc.artist?.country || null
+        },
+      },
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
       averageRate: parseFloat(raw[index].averageRate) || null,
       averageCover: parseFloat(raw[index].averageCover) || null,
@@ -169,7 +176,7 @@ export class DiscsService {
     };
   }
 
-  async findAllByDate(paginationDto: PaginationDto, user: User) {
+  async findAllByDate(paginationDto: PaginationDto, user: User, genreId?: string) {
     const { limit = 10, offset = 0, query, dateRange } = paginationDto;
 
     const userId = user.id;
@@ -206,6 +213,9 @@ export class DiscsService {
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
       );
+      if (genreId) {
+        queryBuilder.andWhere('disc.genreId = :genreId', { genreId });
+      }
     }
 
     if (dateRange && dateRange.length === 2) {
@@ -240,6 +250,13 @@ export class DiscsService {
 
       acc[dateKey].push({
         ...disc,
+        artist: {
+          ...disc.artist,
+          country: { 
+            ...disc.artist.country,
+            name: disc.artist?.country || null
+          },
+        },
         userRate: disc.rates.length > 0 ? disc.rates[0] : null,
         favoriteId: disc.favorites.length > 0 ? disc.favorites[0].id : null, // Enviar el ID del favorito
         pendingId:
@@ -318,7 +335,7 @@ export class DiscsService {
 
   async findTopRatedOrFeaturedAndStats(
     paginationDto: PaginationDto,
-    user: User,
+    user: User
   ): Promise<{
     discs: Disc[];
     totalDiscs: number;
@@ -387,6 +404,7 @@ export class DiscsService {
       SELECT 
         d.*, 
         a.name AS "artistName", 
+        c.name AS "artistCountry", 
         g.name AS "genreName", 
         g.color AS "genreColor", 
         COUNT(r.id) AS "voteCount", 
@@ -404,12 +422,13 @@ export class DiscsService {
         ) / (COUNT(r.id) + ${medianVotes}) AS "weightedScore"
       FROM disc d
       LEFT JOIN artist a ON d."artistId" = a.id
+      LEFT JOIN country c ON a."countryId" = c.id
       LEFT JOIN genre g ON d."genreId" = g.id
       LEFT JOIN rate r ON d.id = r."discId"
       LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
       LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
       ${dateCondition}
-      GROUP BY d.id, a.name, g.name, g.color, f.id
+      GROUP BY d.id, a.name, g.name, g.color, f.id, c.name
       ORDER BY "weightedScore" DESC
       LIMIT 20;
     `;
@@ -471,7 +490,7 @@ export class DiscsService {
     // --- Transformación de los datos para el formato esperado ---
     const processedDiscs = topRatedDiscs.map((disc: any) => ({
       ...disc,
-      artist: { name: disc.artistName },
+      artist: { name: disc.artistName, country: { name: disc.artistCountry }},
       genre: { name: disc.genreName, color: disc.genreColor },
       userRate: disc.userRateId
         ? {

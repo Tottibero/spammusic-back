@@ -28,8 +28,12 @@ export class DiscsController {
 
   @Get('date')
   @Auth()
-  findAllByDate(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
-    return this.discsServices.findAllByDate(paginationDto, user);
+  findAllByDate(
+    @Query() paginationDto: PaginationDto,
+    @Query('genreId') genreId: string,
+    @GetUser() user: User,
+  ) {
+    return this.discsServices.findAllByDate(paginationDto, user, genreId);
   }
 
   @Auth()
@@ -40,7 +44,7 @@ export class DiscsController {
   ) {
     return this.discsServices.findTopRatedOrFeaturedAndStats(
       paginationDto,
-      user,
+      user
     );
   }
 
