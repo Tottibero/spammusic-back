@@ -16,7 +16,7 @@ import {
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-  @Column('text', { unique: true })
+  @Column('text', { unique: true, select: false })
   email: string;
 
   @Column('text', { select: false })
@@ -32,6 +32,7 @@ export class User {
 
   @Column('text', {
     array: true,
+    select: false,
     default: ['user'],
   })
   roles: string[];
