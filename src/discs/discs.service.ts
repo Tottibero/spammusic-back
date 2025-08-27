@@ -176,7 +176,7 @@ export class DiscsService {
     };
   }
 
-  async findAllByDate(paginationDto: PaginationDto, user: User, genreId?: string) {
+  async findAllByDate(paginationDto: PaginationDto, user: User) {
     const { limit = 10, offset = 0, query, dateRange } = paginationDto;
 
     const userId = user.id;
@@ -213,9 +213,6 @@ export class DiscsService {
         '(disc.name ILIKE :search OR artist.name ILIKE :search)',
         { search },
       );
-      if (genreId) {
-        queryBuilder.andWhere('disc.genreId = :genreId', { genreId });
-      }
     }
 
     if (dateRange && dateRange.length === 2) {
@@ -335,7 +332,8 @@ export class DiscsService {
 
   async findTopRatedOrFeaturedAndStats(
     paginationDto: PaginationDto,
-    user: User
+    user: User, 
+    genreId?: string
   ): Promise<{
     discs: Disc[];
     totalDiscs: number;
@@ -355,24 +353,44 @@ export class DiscsService {
 
     // Parámetros y condición para la consulta principal (incluye userId)
     let dateCondition = '';
+    let genreCondition = '';
     const params: any[] = [userId]; // $1 será userId
+    let paramCounter = 1;
 
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateCondition = `WHERE d."releaseDate" BETWEEN $2 AND $3`;
+      dateCondition = `WHERE d."releaseDate" BETWEEN $${paramCounter + 1} AND $${paramCounter + 2}`;
       params.push(new Date(startDate));
       params.push(new Date(endDate));
+      paramCounter += 2;
+    }
+
+    if (genreId) {
+      genreCondition = dateCondition ? ' AND' : ' WHERE';
+      genreCondition += ` d."genreId" = $${paramCounter + 1}`;
+      params.push(genreId);
+      paramCounter += 1;
     }
 
     // --- Cálculo de estadísticas globales con filtro de fecha ---
     // Para la consulta global no necesitamos el userId, así que definimos sus propios parámetros
     let dateConditionGlobal = '';
+    let genreConditionGlobal = '';
     const globalStatsParams: any[] = [];
+    let globalParamCounter = 0;
+
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $1 AND $2`;
+      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $${globalParamCounter + 1} AND $${globalParamCounter + 2}`;
       globalStatsParams.push(new Date(startDate));
       globalStatsParams.push(new Date(endDate));
+      globalParamCounter += 2;
+    }
+
+    if (genreId) {
+      genreConditionGlobal = dateConditionGlobal ? ' AND' : ' WHERE';
+      genreConditionGlobal += ` d."genreId" = $${globalParamCounter + 1}`;
+      globalStatsParams.push(genreId);
     }
 
     const globalStatsQuery = `
@@ -387,6 +405,7 @@ export class DiscsService {
         FROM disc d
         LEFT JOIN rate r ON d.id = r."discId"
         ${dateConditionGlobal}
+        ${genreConditionGlobal}
         GROUP BY d.id
       ) AS rate_stats;
     `;
@@ -428,6 +447,7 @@ export class DiscsService {
       LEFT JOIN favorite f ON f."discId" = d.id AND f."userId" = $1
       LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
       ${dateCondition}
+      ${genreCondition}
       GROUP BY d.id, a.name, g.name, g.color, f.id, c.name
       ORDER BY "weightedScore" DESC
       LIMIT 20;
