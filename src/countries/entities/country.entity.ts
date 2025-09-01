@@ -9,6 +9,9 @@ export class Country {
   @Column('varchar', { length: 50 })
   name: string;
 
+  @Column('varchar', { length: 5 })
+  isoCode: string;
+
   @OneToMany(() => Artist, (artist) => artist.country, { cascade: true })
   artist: Artist[];
 }
