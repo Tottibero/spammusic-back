@@ -150,7 +150,7 @@ export class DiscsService {
         ...disc.artist,
         country: {
             ...disc.artist.country,
-            name: disc.artist?.country || null
+            name: disc.artist?.country?.name || null
         },
       },
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
@@ -251,7 +251,7 @@ export class DiscsService {
           ...disc.artist,
           country: { 
             ...disc.artist.country,
-            name: disc.artist?.country || null
+            name: disc.artist?.country?.name || null
           },
         },
         userRate: disc.rates.length > 0 ? disc.rates[0] : null,
