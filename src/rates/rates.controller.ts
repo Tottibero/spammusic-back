@@ -55,4 +55,25 @@ export class RatesController {
   async findRatesByDisc(@Param('discId') discId: string) {
     return this.ratesService.findRatesByDisc(discId);
   }
+  @Get('user/:userId/history')
+  getUserHistoryQB(
+    @Param('userId') userId: string,
+    @Query('type') type?: 'rate' | 'cover' | 'both',
+    @Query('order') order?: 'ASC' | 'DESC',
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('from') from?: string, // '2025-09-01'
+    @Query('to') to?: string, // '2025-09-30'
+  ) {
+    const dateRange =
+      from && to ? ([new Date(from), new Date(to)] as [Date, Date]) : undefined;
+
+    return this.ratesService.findUserActionHistoryPaginatedQB(userId, {
+      type: (type as any) ?? 'both',
+      order: (order as any) ?? 'DESC',
+      limit: limit ? parseInt(limit, 10) : 20,
+      offset: offset ? parseInt(offset, 10) : 0,
+      dateRange,
+    });
+  }
 }
