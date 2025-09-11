@@ -335,7 +335,11 @@ export class RatesService {
     // Orden aproximado por "último evento" para traer primero las filas más recientes.
     // (Luego ordenamos los eventos reales en memoria).
     candidatesQB
-      .orderBy('COALESCE(rate.editedAt, rate.createdAt)', order as any)
+      .orderBy(
+        'rate.editedAt',
+        order as any,
+        order === 'ASC' ? 'NULLS FIRST' : 'NULLS LAST',
+      )
       .addOrderBy('rate.createdAt', order as any);
 
     // Para paginar por eventos (no por filas), traemos un "buffer".
