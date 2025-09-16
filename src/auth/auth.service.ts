@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
+import { ILike } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -49,17 +50,21 @@ export class AuthService {
 
   async login(loginUserDto: LoginUserDto) {
     const { password, username } = loginUserDto;
+
     const user = await this.userRepository.findOne({
-      where: { username },
+      where: { username: ILike(username) }, // 👈 búsqueda case-insensitive
       select: { username: true, password: true, id: true, roles: true },
     });
 
     if (!user) throw new UnauthorizedException('Credentials are not valid!');
 
     if (!bcrypt.compareSync(password, user.password))
-      throw new UnauthorizedException('Credentials are not valid! pass');
+      throw new UnauthorizedException('Credentials are not valid!');
+
+    const { password: _, ...safeUser } = user;
+
     return {
-      ...user,
+      ...safeUser,
       token: this.getJwtToken({
         username: user.username,
         id: user.id,
