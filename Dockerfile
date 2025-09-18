@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:20-bookworm-slim AS build
 
 # Establece el directorio de trabajo
 WORKDIR /app
