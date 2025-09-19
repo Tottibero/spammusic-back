@@ -14,6 +14,10 @@ import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
 import { Pending } from 'src/pendings/entities/pending.entity';
+import {
+  applyOrder,
+  parseOrdersRaw,
+} from 'src/common/helpers/apply-order.helper';
 
 type HistoryOpts = {
   type?: 'rate' | 'cover' | 'both';
@@ -174,11 +178,33 @@ export class RatesService {
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
-    queryBuilder
-      .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC')
-      .addOrderBy('artist.name', 'ASC');
+    const ALLOWED_ORDER_FIELDS = new Set<string>([
+      // columnas reales
+      'disc.releaseDate',
+      'disc.name',
+      'artist.name',
+      'rate.createdAt',
+      'rate.editedAt',
+      'rate.rate', // 👈 tu voto
+      'rate.cover', // 👈 tu voto de portada
+      // FIXME: aliases calculados (subselects ya añadidos arriba)
+      'averageRate',
+      'averageCover',
+      'rateCount',
+      'commentCount',
+    ]);
+
+    const orders = parseOrdersRaw(paginationDto.orderBy, {
+      allowlist: ALLOWED_ORDER_FIELDS, // mapa alias->col
+      defaultDirection: 'ASC',
+    });
+
+    queryBuilder.take(limit).skip(offset);
+
+    applyOrder(queryBuilder, orders, [
+      { field: 'disc.releaseDate', direction: 'DESC', nulls: 'NULLS LAST' },
+      { field: 'artist.name', direction: 'ASC' },
+    ]);
 
     const { entities: rates, raw } = await queryBuilder.getRawAndEntities();
 

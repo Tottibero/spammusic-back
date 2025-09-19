@@ -48,4 +48,8 @@ export class PaginationDto {
   @IsArray()
   @IsString({ each: true }) // Asegurar que los valores del array sean strings
   statusExclusions?: ListStatus[]; // Excluir ciertos estados
+
+  @IsOptional()
+  @IsString()
+  orderBy?: string;
 }
