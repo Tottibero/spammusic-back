@@ -1,0 +1,99 @@
+@baseUrl = http://localhost:3000/api
+@username = username
+@password = password
+
+###
+# =========================
+# LOGIN (ajusta la ruta y el body según tu API)
+# =========================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+# =========================
+# CREAR VERSION (con o sin items)
+# =========================
+# @name createVersion
+POST {{baseUrl}}/versions
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "1.0.0",
+  "notes": "Primera release",
+  "isActive": true,
+  "items": [
+    {
+      "type": "feat",
+      "description": "Nuevo login con Google",
+      "publicVisible": true
+    },
+    {
+      "type": "fix",
+      "description": "Bug en registro corregido",
+      "publicVisible": true
+    }
+  ]
+}
+
+###
+# =========================
+# LISTAR TODAS LAS VERSIONES
+# =========================
+GET {{baseUrl}}/versions
+Authorization: Bearer {{login.response.body.access_token}}
+
+###
+# =========================
+# OBTENER UNA VERSION POR ID
+# (usa la que acabas de crear)
+# =========================
+GET {{baseUrl}}/versions/{{createVersion.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+###
+# =========================
+# CREAR UN ITEM EN ESA VERSION
+# =========================
+# @name createItem
+POST {{baseUrl}}/versions/{{createVersion.response.body.id}}/items
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "type": "perf",
+  "description": "Mejoras de rendimiento en consultas",
+  "publicVisible": true
+}
+
+###
+# =========================
+# ACTUALIZAR ESE ITEM
+# =========================
+PATCH {{baseUrl}}/versions/{{createVersion.response.body.id}}/items/{{createItem.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "description": "Mejoras de rendimiento en consultas (batch + índices)",
+  "publicVisible": true
+}
+
+###
+# =========================
+# ELIMINAR ESE ITEM
+# =========================
+DELETE {{baseUrl}}/versions/{{createVersion.response.body.id}}/items/{{createItem.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+###
+# =========================
+# ULTIMA VERSION ACTIVA (PÚBLICO)
+# =========================
+GET {{baseUrl}}/versions/public/latest

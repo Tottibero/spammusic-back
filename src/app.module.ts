@@ -21,6 +21,7 @@ import { SeedModule } from './seeds/seed.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { PendingsModule } from './pendings/pendings.module';
 import { CommentsModule } from './comments/comments.module';
+import { VersionsModule } from './versions/versions.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { CommentsModule } from './comments/comments.module';
     FavoritesModule,
     PendingsModule,
     CommentsModule,
+    VersionsModule,
   ],
 })
 export class AppModule {}
