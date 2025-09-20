@@ -18,7 +18,7 @@ const dataSource = new DataSource({
   logging: !isProd,
 
   entities: [isProd ? 'dist/**/*.entity.js' : 'src/**/*.entity.ts'],
-  migrations: [isProd ? 'dist/src/migrations/*.js' : 'src/migrations/*.ts'],
+  migrations: [isProd ? 'dist/migrations/*.js' : 'src/migrations/*.ts'],
 
   ssl: isProd,
   extra: isProd ? { ssl: { rejectUnauthorized: false } } : undefined,
