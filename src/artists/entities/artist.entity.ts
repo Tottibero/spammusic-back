@@ -17,6 +17,9 @@ export class Artist {
   @Column('varchar', { length: 100 })
   name: string;
 
+  @Column({ name: 'name_normalized', type: 'text' })
+  nameNormalized: string;
+
   @Column('text', { nullable: true })
   description: string;
 

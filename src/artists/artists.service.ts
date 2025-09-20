@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Artist } from './entities/artist.entity';
 import { Country } from 'src/countries/entities/country.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
+import { normalizeForSearch } from '../common/utils/normalize';
 
 @Injectable()
 export class ArtistsService {
@@ -22,10 +23,12 @@ export class ArtistsService {
     private readonly artistRepository: Repository<Artist>,
   ) {}
 
-  async create(createArtistDto: CreateArtistDto) {
+  async create(dto: CreateArtistDto) {
     try {
-      const artist = this.artistRepository.create(createArtistDto);
-      await this.artistRepository.save(artist);
+      const artist = this.artistRepository.create({
+        ...dto,
+        nameNormalized: normalizeForSearch(dto.name),
+      });
       return artist;
     } catch (error) {
       this.handleDbExceptions(error);
@@ -68,12 +71,12 @@ export class ArtistsService {
       throw new BadRequestException('Name parameter is required');
     }
 
+    const q = `%${normalizeForSearch(name)}%`;
+
     try {
       const artists = await this.artistRepository
         .createQueryBuilder('artist')
-        .where('LOWER(artist.name) LIKE LOWER(:name)', {
-          name: `%${name}%`,
-        })
+        .where('artist.name_normalized LIKE :q', { q })
         .getMany();
       return artists;
     } catch (error) {
@@ -82,11 +85,16 @@ export class ArtistsService {
   }
 
   async update(id: string, updateArtistDto: UpdateArtistDto) {
-    const { countryId, ...rest } = updateArtistDto;
+    const { countryId, name, ...rest } = updateArtistDto;
+
     const artist = await this.artistRepository.preload({
       id,
       ...rest,
-      country: countryId ? { id: countryId } : undefined, // 👈 clave
+      ...(name !== undefined ? { name } : {}), // <-- actualiza name si viene
+      ...(name !== undefined
+        ? { nameNormalized: normalizeForSearch(name) }
+        : {}),
+      country: countryId ? { id: countryId } : undefined,
     });
 
     if (!artist) throw new NotFoundException(`Artist with id ${id} not found`);

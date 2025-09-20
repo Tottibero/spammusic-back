@@ -109,11 +109,11 @@ export class DiscsService {
     if (query) {
       const search = `%${query}%`;
       queryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        '(disc.name ILIKE :search OR artist.name_normalized ILIKE :search)',
         { search },
       );
       totalItemsQueryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        '(disc.name ILIKE :search OR artist.name_normalized ILIKE :search)',
         { search },
       );
     }
@@ -210,7 +210,7 @@ export class DiscsService {
     if (query) {
       const search = `%${query}%`;
       queryBuilder.andWhere(
-        '(disc.name ILIKE :search OR artist.name ILIKE :search)',
+        '(disc.name ILIKE :search OR artist.name_normalized ILIKE :search)',
         { search },
       );
     }
