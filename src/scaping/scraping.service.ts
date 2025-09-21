@@ -28,6 +28,17 @@ export class ScrapingService {
     this.logStream = fs.createWriteStream('manual_data.log', { flags: 'a' });
   }
 
+  // --- SOLO añadido para normalizar el nombre del artista ---
+  private normalize(str: string): string {
+    return (str ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  // ----------------------------------------------------------
+
   private log(message: string) {
     try {
       const timestamp = new Date().toISOString();
@@ -86,23 +97,28 @@ export class ScrapingService {
       let artist = await this.artistRepository.findOne({
         where: { name: ILike(artistName.trim()) },
       });
+
       if (!artist) {
+        // --- ÚNICO CAMBIO: setear nameNormalized al crear el artista ---
         artist = this.artistRepository.create({
           name: artistName,
+          nameNormalized: this.normalize(artistName),
           description: '',
           image: '',
           country: defaultCountry ?? undefined,
-        });
+        } as Partial<Artist>);
+        // ---------------------------------------------------------------
         artist = await this.artistRepository.save(artist);
       }
 
-      // Búsqueda del disco de forma insensible a mayúsculas/minúsculas
+      // Búsqueda del disco de forma insensible a mayúsculas/minúsculas (SIN CAMBIOS)
       let disc = await this.discRepository.findOne({
         where: {
           name: ILike(discName.trim()),
           artist: { id: artist.id },
         },
       });
+
       if (!disc) {
         disc = this.discRepository.create({
           name: discName,
