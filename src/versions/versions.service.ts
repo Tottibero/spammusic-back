@@ -8,6 +8,7 @@ import { CreateVersionDto } from './dto/create-version.dto';
 import { UpdateVersionDto } from './dto/update-version.dto';
 import { CreateVersionItemDto } from './dto/create-version-item.dto';
 import { UpdateVersionItemDto } from './dto/update-version-item.dto';
+import { DevState } from './entities/version-item.entity';
 
 @Injectable()
 export class VersionsService {
@@ -33,6 +34,7 @@ export class VersionsService {
           scope: i.scope,
           breaking: i.breaking ?? false,
           publicVisible: i.publicVisible ?? false,
+          state: i.state ?? DevState.TODO, // 👈 añadir
         }),
       ),
     });
@@ -86,6 +88,7 @@ export class VersionsService {
       scope: dto.scope,
       breaking: dto.breaking ?? false,
       publicVisible: dto.publicVisible ?? false,
+      state: dto.state ?? DevState.TODO, // 👈 añadir
       version,
     });
     return this.itemsRepo.save(item);
@@ -111,6 +114,7 @@ export class VersionsService {
     if (dto.scope !== undefined) item.scope = dto.scope;
     if (dto.breaking !== undefined) item.breaking = dto.breaking;
     if (dto.publicVisible !== undefined) item.publicVisible = dto.publicVisible;
+    if (dto.state !== undefined) item.state = dto.state; // 👈 añadir
 
     return this.itemsRepo.save(item);
   }
@@ -159,5 +163,14 @@ export class VersionsService {
     latest.items = (latest.items ?? []).filter((i) => i.publicVisible);
 
     return latest;
+  }
+  // versions/versions.service.ts
+  async findLatestDraft(): Promise<Version | null> {
+    const draft = await this.versionsRepo.findOne({
+      where: { publishedAt: null },
+      order: { createdAt: 'DESC' },
+      relations: ['items'],
+    });
+    return draft;
   }
 }

@@ -1,18 +1,31 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Index,
+} from 'typeorm';
 import { Version } from './version.entity';
 
 export enum ChangeType {
-  FEAT = 'feat', // Nueva funcionalidad
-  FIX = 'fix', // Corrección de bug
-  DOCS = 'docs', // Cambios en documentación
-  STYLE = 'style', // Cambios de formato (espacios, comas, etc.)
-  REFACTOR = 'refactor', // Cambios internos sin añadir ni corregir funcionalidades
-  PERF = 'perf', // Mejoras de rendimiento
-  TEST = 'test', // Añadir o modificar tests
-  BUILD = 'build', // Cambios en el sistema de build o dependencias
-  CI = 'ci', // Cambios en configuración de CI
-  CHORE = 'chore', // Mantenimiento general
-  REVERT = 'revert', // Revertir un commit previo
+  FEAT = 'feat',
+  FIX = 'fix',
+  DOCS = 'docs',
+  STYLE = 'style',
+  REFACTOR = 'refactor',
+  PERF = 'perf',
+  TEST = 'test',
+  BUILD = 'build',
+  CI = 'ci',
+  CHORE = 'chore',
+  REVERT = 'revert',
+}
+
+export enum DevState {
+  TODO = 'todo',
+  IN_PROGRESS = 'in_progress',
+  IN_REVIEW = 'in_review',
+  DONE = 'done',
 }
 
 @Entity()
@@ -20,10 +33,7 @@ export class VersionItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({
-    type: 'enum',
-    enum: ChangeType,
-  })
+  @Column({ type: 'enum', enum: ChangeType })
   type: ChangeType;
 
   @Column('text')
@@ -35,12 +45,13 @@ export class VersionItem {
   @Column({ type: 'boolean', default: false })
   breaking?: boolean;
 
-  // 🔹 Nuevo campo para decidir si este cambio se muestra en las notas públicas
   @Column({ type: 'boolean', default: false })
   publicVisible: boolean;
 
-  @ManyToOne(() => Version, (version) => version.items, {
-    onDelete: 'CASCADE',
-  })
+  @Index()
+  @Column({ type: 'enum', enum: DevState, default: DevState.TODO })
+  state: DevState;
+
+  @ManyToOne(() => Version, (version) => version.items, { onDelete: 'CASCADE' })
   version: Version;
 }

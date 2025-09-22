@@ -89,4 +89,8 @@ export class VersionsController {
   findLatestPublic() {
     return this.versionsService.findLatestPublic();
   }
+  @Get('draft/latest')
+  findLatestDraft() {
+    return this.versionsService.findLatestDraft();
+  }
 }

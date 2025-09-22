@@ -5,7 +5,7 @@ import {
   IsString,
   Length,
 } from 'class-validator';
-import { ChangeType } from '../entities/version-item.entity';
+import { ChangeType, DevState } from '../entities/version-item.entity';
 
 export class CreateVersionItemDto {
   @IsEnum(ChangeType)
@@ -26,4 +26,8 @@ export class CreateVersionItemDto {
   @IsOptional()
   @IsBoolean()
   publicVisible?: boolean = false;
+
+  @IsOptional()
+  @IsEnum(DevState)
+  state?: DevState = DevState.TODO;
 }

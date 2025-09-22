@@ -22,6 +22,7 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { PendingsModule } from './pendings/pendings.module';
 import { CommentsModule } from './comments/comments.module';
 import { VersionsModule } from './versions/versions.module';
+import { SpotifyModule } from './spotify/spotify.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { VersionsModule } from './versions/versions.module';
     PendingsModule,
     CommentsModule,
     VersionsModule,
+    SpotifyModule,
   ],
 })
 export class AppModule {}
