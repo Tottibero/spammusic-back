@@ -19,11 +19,11 @@ export class CreateListDto {
   @IsEnum(ListStatus)
   status: ListStatus;
 
-  @IsDateString()
   @IsOptional()
-  listDate?: Date;
+  @IsDateString()
+  listDate?: string | null; // 👈 string (ISO), no Date
 
-  @IsDateString()
   @IsOptional()
-  releaseDate?: Date;
+  @IsDateString()
+  releaseDate?: string | null; // 👈 string (ISO), no Date
 }
