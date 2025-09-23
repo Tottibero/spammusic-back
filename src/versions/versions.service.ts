@@ -34,7 +34,8 @@ export class VersionsService {
           scope: i.scope,
           breaking: i.breaking ?? false,
           publicVisible: i.publicVisible ?? false,
-          state: i.state ?? DevState.TODO, // 👈 añadir
+          state: i.state ?? DevState.TODO,
+          branch: (i as any).branch, // 👈 NUEVO: recoger branch del DTO
         }),
       ),
     });
@@ -88,7 +89,8 @@ export class VersionsService {
       scope: dto.scope,
       breaking: dto.breaking ?? false,
       publicVisible: dto.publicVisible ?? false,
-      state: dto.state ?? DevState.TODO, // 👈 añadir
+      state: dto.state ?? DevState.TODO,
+      branch: (dto as any).branch, // 👈 NUEVO: obligatorio
       version,
     });
     return this.itemsRepo.save(item);
@@ -102,7 +104,7 @@ export class VersionsService {
     // Asegura que el item pertenece a esa versión
     const item = await this.itemsRepo.findOne({
       where: { id: itemId, version: { id: versionId } },
-      relations: ['version'], // por si necesitas version luego
+      relations: ['version'],
     });
     if (!item)
       throw new NotFoundException(
@@ -114,7 +116,8 @@ export class VersionsService {
     if (dto.scope !== undefined) item.scope = dto.scope;
     if (dto.breaking !== undefined) item.breaking = dto.breaking;
     if (dto.publicVisible !== undefined) item.publicVisible = dto.publicVisible;
-    if (dto.state !== undefined) item.state = dto.state; // 👈 añadir
+    if (dto.state !== undefined) item.state = dto.state;
+    if ((dto as any).branch !== undefined) item.branch = (dto as any).branch; // 👈 NUEVO
 
     return this.itemsRepo.save(item);
   }
@@ -148,7 +151,7 @@ export class VersionsService {
       items: v.items?.filter((i) => i.publicVisible) ?? [],
     })) as Version[];
   }
-  // versions/versions.service.ts
+
   async findLatestPublic(): Promise<Version | null> {
     // Trae la última versión activa por publishedAt (y fallback por releaseDate/createdAt)
     const [latest] = await this.versionsRepo.find({
@@ -164,7 +167,7 @@ export class VersionsService {
 
     return latest;
   }
-  // versions/versions.service.ts
+
   async findLatestDraft(): Promise<Version | null> {
     const draft = await this.versionsRepo.findOne({
       where: { publishedAt: null },

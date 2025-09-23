@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Length,
@@ -32,5 +33,6 @@ export class CreateVersionItemDto {
   state?: DevState = DevState.TODO;
 
   @IsString()
+  @IsNotEmpty()
   branch: string;
 }
