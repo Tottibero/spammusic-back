@@ -48,6 +48,9 @@ export class VersionItem {
   @Column({ type: 'boolean', default: false })
   publicVisible: boolean;
 
+  @Column({ type: 'varchar', length: 200, nullable: false })
+  branch: string;
+
   @Index()
   @Column({ type: 'enum', enum: DevState, default: DevState.TODO })
   state: DevState;

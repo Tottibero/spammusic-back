@@ -30,4 +30,7 @@ export class CreateVersionItemDto {
   @IsOptional()
   @IsEnum(DevState)
   state?: DevState = DevState.TODO;
+
+  @IsString()
+  branch: string;
 }
