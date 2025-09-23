@@ -32,4 +32,8 @@ export class CreateUserDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   roles?: string[];
+
+  @IsOptional()
+  @IsString()
+  image: string;
 }

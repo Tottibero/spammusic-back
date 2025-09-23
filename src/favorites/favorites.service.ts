@@ -14,6 +14,10 @@ import { User } from 'src/auth/entities/user.entity';
 import { Disc } from 'src/discs/entities/disc.entity';
 // Importamos la entidad Pending para poder hacer el join
 import { Pending } from 'src/pendings/entities/pending.entity';
+import {
+  applyOrder,
+  parseOrdersRaw,
+} from 'src/common/helpers/apply-order.helper';
 
 @Injectable()
 export class FavoritesService {
@@ -82,6 +86,9 @@ export class FavoritesService {
       .addSelect('rate.rate', 'userRate')
       .addSelect('rate.cover', 'userCover')
       .addSelect('pending.id', 'pendingId')
+      .addSelect('rate.rate', 'rate_rate')
+      .addSelect('rate.cover', 'rate_cover')
+
       // Agrega el conteo de votos para cada disco
       .addSelect((subQuery) => {
         return subQuery
@@ -132,12 +139,35 @@ export class FavoritesService {
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
+    const ALLOWED_ORDER_FIELDS = new Set<string>([
+      // columnas reales/relaciones
+      'disc.releaseDate',
+      'disc.name',
+      'artist.name',
+      'favorite.createdAt',
+      // campos del join de rate del propio usuario
+      'rate.rate',
+      'rate.cover',
+      // aliases calculados / subselects
+      'averageRate',
+      'averageCover',
+      'rateCount',
+      'commentCount',
+      // opcional: si prefieres ordenar por el alias seleccionado arriba
+      'userRate',
+    ]);
 
-    queryBuilder
-      .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC')
-      .addOrderBy('artist.name', 'ASC');
+    const orders = parseOrdersRaw(paginationDto.orderBy, {
+      allowlist: ALLOWED_ORDER_FIELDS,
+      defaultDirection: 'ASC',
+    });
+
+    queryBuilder.take(limit).skip(offset);
+
+    applyOrder(queryBuilder, orders, [
+      { field: 'disc.releaseDate', direction: 'DESC', nulls: 'NULLS LAST' },
+      { field: 'artist.name', direction: 'ASC' },
+    ]);
 
     const { entities: favorites, raw } = await queryBuilder.getRawAndEntities();
 
@@ -151,7 +181,7 @@ export class FavoritesService {
           country: favorite.disc.artist?.country || null,
         },
         userFavorite: { id: favorite.id },
-        voteCount: parseInt(raw[index].rateCount, 10) || null,    
+        voteCount: parseInt(raw[index].rateCount, 10) || null,
         commentCount: parseInt(raw[index].commentCount, 10) || 0,
         userRate: raw[index].rateId
           ? {
@@ -178,6 +208,8 @@ export class FavoritesService {
         'rate.discId = disc.id AND rate.userId = :userId',
         { userId },
       )
+      .addSelect('rate.rate', 'rate_rate')
+      .addSelect('rate.cover', 'rate_cover')
       .leftJoin(
         Pending,
         'pending',
