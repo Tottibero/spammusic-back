@@ -243,6 +243,7 @@ export class CommentsService {
           user: {
             id: user.id,
             username: user.username,
+            image: user.image,
           },
           disc: {
             id: disc.id,
