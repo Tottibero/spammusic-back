@@ -10,7 +10,7 @@ import { Point } from 'src/points/entities/point.entity';
 @Entity('reunions') // Nombre de la tabla en plural (opcional, ajusta según tu convención)
 export class Reunion {
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
   @Column({ type: 'varchar', length: 255 })
   titulo: string;

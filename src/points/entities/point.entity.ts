@@ -10,7 +10,7 @@ import { Reunion } from 'src/reunions/entities/reunion.entity';
 @Entity('points') // Nombre de la tabla en plural
 export class Point {
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
   @Column({ type: 'varchar', length: 255 })
   titulo: string;

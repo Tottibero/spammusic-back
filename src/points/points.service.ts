@@ -32,7 +32,7 @@ export class PointService {
     return this.pointRepository.find({ relations: ['reunion'] }); // Incluir la relación con Reunion
   }
 
-  async findOne(id: number): Promise<Point> {
+  async findOne(id: string): Promise<Point> {
     const point = await this.pointRepository.findOne({
       where: { id },
       relations: ['reunion'],
@@ -43,13 +43,13 @@ export class PointService {
     return point;
   }
 
-  async updatePoint(id: number, updateData: Partial<Point>): Promise<Point> {
+  async updatePoint(id: string, updateData: Partial<Point>): Promise<Point> {
     const point = await this.findOne(id);
     Object.assign(point, updateData);
     return this.pointRepository.save(point);
   }
 
-  async deletePoint(id: number): Promise<void> {
+  async deletePoint(id: string): Promise<void> {
     const result = await this.pointRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Point with ID ${id} not found`);

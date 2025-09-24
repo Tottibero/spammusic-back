@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsObject, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsObject, IsOptional, IsUUID } from 'class-validator';
 import { Column } from 'typeorm';
 
 export class CreatePointDto {
@@ -12,5 +12,6 @@ export class CreatePointDto {
   content?: string; // Ahora el campo puede ser opcional
 
   @IsNotEmpty()
-  reunionId: number; // ID de la reunión a la que pertenece este punto
+  @IsUUID('4') // 👈 valida que sea UUID v4
+  reunionId: string; // 👈 debe ser string
 }

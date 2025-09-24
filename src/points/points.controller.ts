@@ -26,20 +26,20 @@ export class PointController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('id') id: string) {
     return this.pointService.findOne(id);
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body() updateData: Partial<CreatePointDto>,
   ) {
     return this.pointService.updatePoint(id, updateData);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
+  async remove(@Param('id') id: string) {
     return this.pointService.deletePoint(id);
   }
 }

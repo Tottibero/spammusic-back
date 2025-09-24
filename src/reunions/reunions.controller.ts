@@ -26,20 +26,20 @@ export class ReunionController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('id') id: string) {
     return this.reunionService.findOne(id);
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body() updateData: Partial<CreateReunionDto>,
   ) {
     return this.reunionService.updateReunion(id, updateData);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
+  async remove(@Param('id') id: string) {
     return this.reunionService.deleteReunion(id);
   }
 }

@@ -23,7 +23,7 @@ export class ReunionService {
     });
   }
 
-  async findOne(id: number): Promise<Reunion> {
+  async findOne(id: string): Promise<Reunion> {
     const reunion = await this.reunionRepository.findOne({
       where: { id },
       relations: ['points'],
@@ -35,7 +35,7 @@ export class ReunionService {
   }
 
   async updateReunion(
-    id: number,
+    id: string,
     updateData: Partial<Reunion>,
   ): Promise<Reunion> {
     const reunion = await this.findOne(id);
@@ -43,7 +43,7 @@ export class ReunionService {
     return this.reunionRepository.save(reunion);
   }
 
-  async deleteReunion(id: number): Promise<void> {
+  async deleteReunion(id: string): Promise<void> {
     const result = await this.reunionRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Reunion with ID ${id} not found`);
