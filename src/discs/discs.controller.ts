@@ -13,9 +13,11 @@ import { DiscsService } from './discs.service';
 import { CreateDiscDto } from './dto/create-discs.dto';
 import { UpdateDiscDto } from './dto/update-discs.dto';
 import { PaginationDto } from '../common/dtos/pagination.dto';
+
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
+import { TopStatsQueryDto } from 'src/common/dtos/top-stats-query.dto';
 
 @Controller('discs')
 export class DiscsController {
@@ -28,24 +30,20 @@ export class DiscsController {
 
   @Get('date')
   @Auth()
-  findAllByDate(
-    @Query() paginationDto: PaginationDto,
-    @GetUser() user: User,
-  ) {
+  findAllByDate(@Query() paginationDto: PaginationDto, @GetUser() user: User) {
     return this.discsServices.findAllByDate(paginationDto, user);
   }
 
   @Auth()
   @Get('homeDiscs')
   findTopRatedOrFeatured(
-    @Query() paginationDto: PaginationDto,
-    @Query('genreId') genreId: string,
+    @Query() dto: TopStatsQueryDto,
     @GetUser() user: User,
   ) {
     return this.discsServices.findTopRatedOrFeaturedAndStats(
-      paginationDto,
-      user, 
-      genreId
+      dto,
+      user,
+      dto.genreId,
     );
   }
 
