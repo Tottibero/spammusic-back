@@ -11,6 +11,8 @@ export class RatesStatsService {
     constructor(
         @InjectRepository(Rate)
         private readonly rateRepository: Repository<Rate>,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
     ) { }
 
     async getUserStats(user: User) {
@@ -123,6 +125,20 @@ export class RatesStatsService {
             }
         });
 
+        // 6. Total Usuarios y Ranking
+        const totalUsers = await this.userRepository.count();
+
+        // Ranking: Contar cuántos usuarios tienen más votos que el usuario actual
+        const usersWithMoreVotesRaw = await this.rateRepository
+            .createQueryBuilder('rate')
+            .select('rate.user.id')
+            .where('rate.rate IS NOT NULL')
+            .groupBy('rate.user.id')
+            .having('COUNT(rate.id) > :totalVotes', { totalVotes })
+            .getRawMany();
+
+        const rank = usersWithMoreVotesRaw.length + 1;
+
         return {
             totalVotes,
             mean,
@@ -130,6 +146,8 @@ export class RatesStatsService {
             votesByGenre: formattedVotesByGenre,
             votesByMonth: formattedVotesByMonth,
             votesByScore,
+            totalUsers,
+            rank,
         };
     }
 }
