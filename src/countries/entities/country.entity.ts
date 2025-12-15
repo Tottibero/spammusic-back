@@ -6,10 +6,10 @@ export class Country {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 50 })
+  @Column('varchar', { length: 255 })
   name: string;
 
-  @Column('varchar', { length: 5, nullable: true })
+  @Column('varchar', { length: 50, nullable: true })
   isoCode: string;
 
   @OneToMany(() => Artist, (artist) => artist.country, { cascade: true })

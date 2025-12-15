@@ -1,0 +1,135 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
+import { Rate } from './entities/rate.entity';
+import { User } from 'src/auth/entities/user.entity';
+
+@Injectable()
+export class RatesStatsService {
+    private readonly logger = new Logger('RatesStatsService');
+
+    constructor(
+        @InjectRepository(Rate)
+        private readonly rateRepository: Repository<Rate>,
+    ) { }
+
+    async getUserStats(user: User) {
+        const userId = user.id;
+
+        // 1. Total de votos (rates)
+        const totalVotes = await this.rateRepository.count({
+            where: {
+                user: { id: userId },
+                rate: Not(IsNull()), // Solo cuenta si tiene rate (voto)
+            },
+        });
+
+        // 2. Votos por género
+        const votesByGenre = await this.rateRepository
+            .createQueryBuilder('rate')
+            .innerJoin('rate.disc', 'disc')
+            .innerJoin('disc.genre', 'genre')
+            .select('genre.name', 'genre')
+            .addSelect('COUNT(rate.id)', 'count')
+            .where('rate.userId = :userId', { userId })
+            .andWhere('rate.rate IS NOT NULL')
+            .groupBy('genre.name')
+            .getRawMany();
+
+        // Mapear resultados para asegurar formato numérico en count
+        const formattedVotesByGenre = votesByGenre.map((item) => ({
+            genre: item.genre,
+            count: parseInt(item.count, 10),
+        }));
+
+        // 3. Votos por mes y semana en 2025
+        const votesByMonthRaw = await this.rateRepository
+            .createQueryBuilder('rate')
+            .select("TO_CHAR(rate.createdAt, 'Month')", 'month')
+            .addSelect("EXTRACT(MONTH FROM rate.createdAt)", 'month_num')
+            .addSelect("TO_CHAR(rate.createdAt, 'W')", 'week')
+            .addSelect('COUNT(rate.id)', 'count')
+            .where('rate.userId = :userId', { userId })
+            .andWhere('rate.rate IS NOT NULL')
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :year", { year: '2025' })
+            .groupBy('month')
+            .addGroupBy('month_num')
+            .addGroupBy('week')
+            .orderBy('month_num', 'ASC')
+            .addOrderBy('week', 'ASC')
+            .getRawMany();
+
+        // Agrupar por mes y luego por semana
+        const votesByMonthMap = new Map<string, { month: string; count: number; weeks: { week: string; count: number }[] }>();
+
+        votesByMonthRaw.forEach((item) => {
+            const month = item.month.trim();
+            const count = parseInt(item.count, 10);
+            const week = item.week;
+
+            if (!votesByMonthMap.has(month)) {
+                votesByMonthMap.set(month, {
+                    month,
+                    count: 0,
+                    weeks: [],
+                });
+            }
+
+            const monthEntry = votesByMonthMap.get(month);
+            monthEntry.count += count;
+            monthEntry.weeks.push({
+                week: week,
+                count: count,
+            });
+        });
+
+        const formattedVotesByMonth = Array.from(votesByMonthMap.values());
+
+        // 4. Media y Mediana
+        const stats = await this.rateRepository
+            .createQueryBuilder('rate')
+            .select('AVG(rate.rate)', 'mean')
+            .addSelect('PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY rate.rate)', 'median')
+            .where('rate.userId = :userId', { userId })
+            .andWhere('rate.rate IS NOT NULL')
+            .getRawOne();
+
+        const mean = stats && stats.mean ? parseFloat(stats.mean).toFixed(2) : 0;
+        const median = stats && stats.median ? parseFloat(stats.median) : 0;
+
+        // 5. Desglose de votos (0-10)
+        const votesByScoreRaw = await this.rateRepository
+            .createQueryBuilder('rate')
+            .select('rate.rate', 'score')
+            .addSelect('COUNT(rate.id)', 'count')
+            .where('rate.userId = :userId', { userId })
+            .andWhere('rate.rate IS NOT NULL')
+            .groupBy('rate.rate')
+            .orderBy('rate.rate', 'ASC')
+            .getRawMany();
+
+        // Inicializar array con 0s para todos los scores del 0 al 10
+        const votesByScore = Array.from({ length: 11 }, (_, i) => ({
+            score: i,
+            count: 0,
+        }));
+
+        // Rellenar con los datos reales
+        votesByScoreRaw.forEach((item) => {
+            const score = Math.floor(parseFloat(item.score));
+            const count = parseInt(item.count, 10);
+            if (score >= 0 && score <= 10) {
+                votesByScore[score].count += count;
+            }
+        });
+
+        return {
+            totalVotes,
+            mean,
+            median,
+            votesByGenre: formattedVotesByGenre,
+            votesByMonth: formattedVotesByMonth,
+            votesByScore,
+        };
+    }
+}

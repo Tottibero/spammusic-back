@@ -1,0 +1,23 @@
+@baseUrl = http://localhost:3000/api
+@username = tottibero
+@password = Spammusic2025
+
+###
+# =========================
+# LOGIN
+# =========================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+# =========================
+# OBTENER ESTADISTICAS DE USUARIO
+# =========================
+GET {{baseUrl}}/rates/stats
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRvdHRpYmVybyIsImlkIjoiNGIwMDY4MTctODJiYy00Yzg3LWIyYWItZWJmYzgyNTc5Njk3Iiwicm9sZXMiOlsidXNlciIsInN1cGVyVXNlciIsInJpZmZWYWxsZXkiXSwiaWF0IjoxNzY1Nzk0MTY1LCJleHAiOjE3NjU4ODA1NjV9.nMLrIXJNPIWwSj4sXDMytCK4_ypS9F6pPk0UsImUE10
