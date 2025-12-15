@@ -1,0 +1,23 @@
+# Datos y dumps
+postgres/
+*.dump
+*.sql
+
+# Dependencias y artefactos
+node_modules/
+dist/
+.build/
+.next/
+coverage/
+
+# Control de versiones y editor
+.git/
+.gitignore
+*.log
+.DS_Store
+
+# Archivos locales
+.env
+.env.*
+restore_heroku_to_local.sh
+.venv
