@@ -423,7 +423,9 @@ export class DiscsService {
       SELECT 
         d.*, 
         a.name AS "artistName", 
-        c.name AS "artistCountry", 
+        c.id AS "countryId",
+        c.name AS "countryName",
+        c."isoCode" AS "countryIsoCode",
         g.name AS "genreName", 
         g.color AS "genreColor", 
         COUNT(r.id) AS "voteCount", 
@@ -448,7 +450,7 @@ export class DiscsService {
       LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
       ${dateCondition}
       ${genreCondition}
-      GROUP BY d.id, a.name, g.name, g.color, f.id, c.name
+      GROUP BY d.id, a.name, g.name, g.color, f.id, c.id, c.name, c."isoCode"
       ORDER BY "weightedScore" DESC
       LIMIT 20;
     `;
@@ -510,7 +512,14 @@ export class DiscsService {
     // --- Transformación de los datos para el formato esperado ---
     const processedDiscs = topRatedDiscs.map((disc: any) => ({
       ...disc,
-      artist: { name: disc.artistName, country: { name: disc.artistCountry }},
+      artist: { 
+        name: disc.artistName, 
+        country: { 
+          id: disc.countryId,
+          name: disc.countryName || null,
+          isoCode: disc.countryIsoCode || null
+        }
+      },
       genre: { name: disc.genreName, color: disc.genreColor },
       userRate: disc.userRateId
         ? {

@@ -47,15 +47,36 @@ export class RatesService {
       if (!disc) {
         throw new NotFoundException(`Disc with id ${discId} not found`);
       }
-
-      const rate = this.rateRepository.create({
-        ...rateData,
-        user,
-        disc, // Asignar la entidad Disc encontrada
+      
+      // Check if rate already exists for this user and disc
+      const existingRate = await this.rateRepository.findOne({
+        where: {
+          user: { id: user.id },
+          disc: { id: discId }
+        }
       });
 
-      await this.rateRepository.save(rate);
-      return rate;
+      if (existingRate) {
+        // Update existing rate
+        const updatedRate = await this.rateRepository.preload({
+          id: existingRate.id,
+          ...rateData,
+          editedAt: new Date()
+        });
+
+        await this.rateRepository.save(updatedRate);
+        return updatedRate;
+      }
+
+      // Create new rate if it doesn't exist
+      const newRate = this.rateRepository.create({
+        ...rateData,
+        user,
+        disc,
+      });
+
+      await this.rateRepository.save(newRate);
+      return newRate;
     } catch (error) {
       this.handleDbExceptions(error);
     }
