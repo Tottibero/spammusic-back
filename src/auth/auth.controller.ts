@@ -18,7 +18,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('register')
   create(@Body() createUserDto: CreateUserDto) {
@@ -48,6 +48,16 @@ export class AuthController {
   @Get('usersRv')
   findAllRv() {
     return this.authService.findAllRv();
+  }
+
+  @Get('users/role/:role')
+  findUsersByRole(@Param('role') role: string) {
+    return this.authService.findUsersByRole(role);
+  }
+
+  @Get('users/superusers')
+  findSuperUsers() {
+    return this.authService.findSuperUsers();
   }
 
   @Get(':id')

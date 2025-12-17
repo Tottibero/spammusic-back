@@ -1,0 +1,111 @@
+@baseUrl = http://localhost:3000/api
+@username = tottibero
+@password = Spammusic2025
+
+### =========================================
+# LOGIN
+# =========================================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### =========================================
+# 1. OBTENER TODOS LOS USUARIOS
+# =========================================
+GET {{baseUrl}}/auth/users
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 2. OBTENER USUARIOS RIFF VALLEY
+# =========================================
+GET {{baseUrl}}/auth/usersRv
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 3. OBTENER SUPERUSERS
+# =========================================
+GET {{baseUrl}}/auth/users/superusers
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 4. OBTENER USUARIOS POR ROL (superUser)
+# =========================================
+GET {{baseUrl}}/auth/users/role/superUser
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 5. OBTENER USUARIOS POR ROL (admin)
+# =========================================
+GET {{baseUrl}}/auth/users/role/admin
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 6. OBTENER USUARIOS POR ROL (riffValley)
+# =========================================
+GET {{baseUrl}}/auth/users/role/riffValley
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 7. OBTENER USUARIOS POR ROL (user)
+# =========================================
+GET {{baseUrl}}/auth/users/role/user
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 8. OBTENER UN USUARIO POR ID (Reemplazar con ID real)
+# =========================================
+# @name getUser
+GET {{baseUrl}}/auth/your-user-id-here
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 9. RUTA PRIVADA DE PRUEBA (Solo superUser y admin)
+# =========================================
+GET {{baseUrl}}/auth/private
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 10. ACTUALIZAR USUARIO ACTUAL
+# =========================================
+PATCH {{baseUrl}}/auth
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "username": "{{username}}"
+}
+
+### =========================================
+# 11. ACTUALIZAR USUARIO COMO SUPERADMIN (Reemplazar con ID real)
+# =========================================
+PATCH {{baseUrl}}/auth/superadmin/user-id-here
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "username": "nuevo_username"
+}
+
+### =========================================
+# 12. REGISTRAR NUEVO USUARIO
+# =========================================
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "test_user",
+  "email": "test@example.com",
+  "password": "Test123456"
+}
+
+### =========================================
+# 13. ELIMINAR USUARIO (Reemplazar con ID del usuario creado)
+# =========================================
+DELETE {{baseUrl}}/auth/{{register.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}

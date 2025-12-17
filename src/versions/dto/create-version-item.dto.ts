@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
 } from 'class-validator';
 import { ChangeType, DevState, Priority } from '../entities/version-item.entity';
@@ -30,4 +31,12 @@ export class CreateVersionItemDto {
   @IsString()
   @IsNotEmpty()
   branch: string;
+
+  @IsOptional()
+  @IsUUID()
+  backUserId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  frontUserId?: string;
 }

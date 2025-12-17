@@ -21,7 +21,7 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
   async create(createUserDto: CreateUserDto) {
     try {
       const { password, ...userData } = createUserDto;
@@ -111,6 +111,28 @@ export class AuthService {
       this.handleDBerrors(error);
     }
   }
+
+  async findUsersByRole(role: string) {
+    try {
+      const users = await this.userRepository
+        .createQueryBuilder('user')
+        .select(['user.id', 'user.username', 'user.email', 'user.roles', 'user.image'])
+        .where(':role = ANY(user.roles)', { role })
+        .getMany();
+
+      return users.map((user) => {
+        delete user.password;
+        return user;
+      });
+    } catch (error) {
+      this.handleDBerrors(error);
+    }
+  }
+
+  async findSuperUsers() {
+    return this.findUsersByRole('superUser');
+  }
+
 
   async findOne(id: string): Promise<User> {
     try {

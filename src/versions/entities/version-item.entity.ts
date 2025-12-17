@@ -4,8 +4,10 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   Index,
+  JoinColumn,
 } from 'typeorm';
 import { Version } from './version.entity';
+import { User } from '../../auth/entities/user.entity';
 
 export enum ChangeType {
   FEAT = 'feat',
@@ -64,4 +66,12 @@ export class VersionItem {
     nullable: true,
   })
   version: Version;
+
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'backUserId' })
+  backUser?: User;
+
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'frontUserId' })
+  frontUser?: User;
 }

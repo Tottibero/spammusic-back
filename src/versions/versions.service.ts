@@ -142,6 +142,8 @@ export class VersionsService {
       state,
       branch: (dto as any).branch,
       version,
+      backUser: dto.backUserId ? { id: dto.backUserId } as any : undefined,
+      frontUser: dto.frontUserId ? { id: dto.frontUserId } as any : undefined,
     });
     return this.itemsRepo.save(item);
   }
@@ -176,6 +178,15 @@ export class VersionsService {
     if (dto.description !== undefined) item.description = dto.description;
     if (dto.scope !== undefined) item.scope = dto.scope;
     if (dto.priority !== undefined) item.priority = dto.priority;
+
+    // Handle user assignments
+    if (dto.backUserId !== undefined) {
+      item.backUser = dto.backUserId ? { id: dto.backUserId } as any : null;
+    }
+    if (dto.frontUserId !== undefined) {
+      item.frontUser = dto.frontUserId ? { id: dto.frontUserId } as any : null;
+    }
+
     // Handle version assignment
     let newVersion: Version | null | undefined = undefined;
     if (dto.version !== undefined) {
@@ -258,12 +269,13 @@ export class VersionsService {
   async findDevStatus() {
     const devVersion = await this.versionsRepo.findOne({
       where: { status: VersionStatus.EN_DESARROLLO },
-      relations: ['items'],
+      relations: ['items', 'items.backUser', 'items.frontUser'],
       order: { createdAt: 'DESC' },
     });
 
     const backlog = await this.itemsRepo.find({
       where: { version: IsNull() },
+      relations: ['backUser', 'frontUser'],
       order: { id: 'DESC' },
     });
 
