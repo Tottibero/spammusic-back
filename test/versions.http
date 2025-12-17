@@ -1,0 +1,261 @@
+@baseUrl = http://localhost:3000/api
+@username = tottibero
+@password = Spammusic2025
+
+### =========================================
+# LOGIN
+# =========================================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### =========================================
+# 0. LIMPIEZA PREVIA (Opcional)
+# =========================================
+# Intentamos obtener la última versión en borrador (dev) para borrarla si existe
+# @name getExistingDev
+GET {{baseUrl}}/versions/draft/latest
+Authorization: Bearer {{login.response.body.access_token}}
+
+### Borrar la versión dev existente si la hay (usando el ID del paso anterior)
+# @name deleteExistingDev
+DELETE {{baseUrl}}/versions/{{getExistingDev.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+# Ignorar error 404 si no existe
+
+### =========================================
+# 1. CREAR VERSIÓN EN DESARROLLO (Válido)
+# =========================================
+# @name createDevVersion
+POST {{baseUrl}}/versions
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "1.1.0",
+  "releaseDate": "2025-12-20",
+  "notes": "Versión de prueba",
+  "link": "https://t.me/spammusic/123",
+  "items": [
+    {
+      "type": "feat",
+      "description": "Nueva funcionalidad de prueba",
+      "branch": "feature/nueva-funcionalidad",
+      "state": "todo"
+    }
+  ]
+}
+
+### =========================================
+# 2. INTENTAR CREAR OTRA VERSIÓN EN DESARROLLO (Debe fallar)
+# =========================================
+POST {{baseUrl}}/versions
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "1.2.0",
+  "releaseDate": "2026-01-01",
+  "notes": "Intento de segunda versión dev",
+  "items": []
+}
+
+### =========================================
+# 3. LISTAR VERSIONES
+# =========================================
+GET {{baseUrl}}/versions
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 4. AÑADIR ITEM A LA VERSIÓN
+# =========================================
+# @name createItem
+POST {{baseUrl}}/versions/{{createDevVersion.response.body.id}}/items
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "type": "fix",
+  "description": "Corrección de bug crítico",
+  "branch": "fix/bug-critico",
+  "state": "in_progress"
+}
+
+### =========================================
+# 5. INTENTAR CERRAR VERSIÓN CON ITEMS PENDIENTES (Debe fallar)
+# =========================================
+PATCH {{baseUrl}}/versions/{{createDevVersion.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "status": "en_produccion"
+}
+
+### =========================================
+# 6. COMPLETAR ITEMS
+# =========================================
+# Completar el primer item
+PATCH {{baseUrl}}/versions/{{createDevVersion.response.body.id}}/items/{{createDevVersion.response.body.items[0].id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "state": "done"
+}
+
+### Completar el segundo item
+PATCH {{baseUrl}}/versions/{{createDevVersion.response.body.id}}/items/{{createItem.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "state": "done"
+}
+
+### =========================================
+# 7. CERRAR VERSIÓN (Ahora debe funcionar)
+# =========================================
+PATCH {{baseUrl}}/versions/{{createDevVersion.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "status": "en_produccion",
+  "isActive": true,
+  "publishedAt": "2025-12-15T22:00:00Z"
+}
+
+### =========================================
+# 8. INTENTAR BORRAR VERSIÓN EN PRODUCCIÓN (Debe fallar)
+# =========================================
+DELETE {{baseUrl}}/versions/{{createDevVersion.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 9. CREAR NUEVA VERSIÓN EN DESARROLLO (Ahora debe funcionar)
+# =========================================
+# @name createDevVersion2
+POST {{baseUrl}}/versions
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "1.2.0",
+  "releaseDate": "2026-01-15",
+  "notes": "Siguiente versión",
+  "items": []
+}
+
+### =========================================
+# 10. BORRAR VERSIÓN EN DESARROLLO (Debe funcionar)
+# =========================================
+DELETE {{baseUrl}}/versions/{{createDevVersion2.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 11. CREAR ITEM INDEPENDIENTE (BACKLOG)
+# =========================================
+# @name createBacklogItem
+POST {{baseUrl}}/versions/items
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "type": "refactor",
+  "description": "Refactorizar módulo de auth",
+  "branch": "refactor/auth-module",
+  "state": "todo"
+}
+
+### =========================================
+# 12. LISTAR ITEMS INDEPENDIENTES
+# =========================================
+GET {{baseUrl}}/versions/dev
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 13. ACTUALIZAR ITEM INDEPENDIENTE
+# =========================================
+PATCH {{baseUrl}}/versions/items/{{createBacklogItem.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "description": "Refactorizar módulo de auth (actualizado)"
+}
+
+### =========================================
+# 14. ASIGNAR ITEM A UNA VERSIÓN (Primero creamos una versión)
+# =========================================
+# @name createDevVersion3
+POST {{baseUrl}}/versions
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "1.3.0",
+  "releaseDate": "2026-02-01",
+  "notes": "Versión para probar asignación"
+}
+
+### Asignar el item de backlog a esta versión (usando endpoint genérico de update item)
+PATCH {{baseUrl}}/versions/items/{{createBacklogItem.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": "{{createDevVersion3.response.body.id}}"
+}
+
+### =========================================
+# 15. DESASIGNAR ITEM DE LA VERSIÓN (Volver a backlog)
+# =========================================
+PATCH {{baseUrl}}/versions/items/{{createBacklogItem.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.access_token}}
+
+{
+  "version": null
+}
+
+### =========================================
+# 16. BORRAR ITEM INDEPENDIENTE
+# =========================================
+DELETE {{baseUrl}}/versions/items/{{createBacklogItem.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 17. LIMPIEZA FINAL (Borrar versión creada)
+# =========================================
+DELETE {{baseUrl}}/versions/{{createDevVersion3.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 18. LISTAR VERSIONES EN PRODUCCIÓN PAGINADAS (Primera página, 9 items)
+# =========================================
+GET {{baseUrl}}/versions/production/paginated
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 19. LISTAR VERSIONES EN PRODUCCIÓN PAGINADAS (Segunda página, 9 items)
+# =========================================
+GET {{baseUrl}}/versions/production/paginated?page=2&limit=9
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 20. LISTAR VERSIONES EN PRODUCCIÓN PAGINADAS (Personalizado: 5 items)
+# =========================================
+GET {{baseUrl}}/versions/production/paginated?page=1&limit=5
+Authorization: Bearer {{login.response.body.access_token}}
+
+### =========================================
+# 21. OBTENER NOMBRE DE LA ÚLTIMA VERSIÓN EN PRODUCCIÓN
+# =========================================
+GET {{baseUrl}}/versions/production/latest
+Authorization: Bearer {{login.response.body.access_token}}

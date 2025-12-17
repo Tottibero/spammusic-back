@@ -8,8 +8,10 @@ import {
   ValidateNested,
   Matches,
   IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { CreateVersionItemDto } from './create-version-item.dto';
+import { VersionStatus } from '../entities/version.entity';
 
 export class CreateVersionDto {
   @IsString()
@@ -29,12 +31,21 @@ export class CreateVersionDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  link?: string;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean; // 👈
 
   @IsOptional()
   @IsDateString()
   publishedAt?: string; // 👈 opcional
+
+  @IsOptional()
+  @IsEnum(VersionStatus)
+  status?: VersionStatus;
 
   @IsOptional()
   @IsArray()

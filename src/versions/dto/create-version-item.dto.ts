@@ -1,12 +1,11 @@
 import {
-  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Length,
 } from 'class-validator';
-import { ChangeType, DevState } from '../entities/version-item.entity';
+import { ChangeType, DevState, Priority } from '../entities/version-item.entity';
 
 export class CreateVersionItemDto {
   @IsEnum(ChangeType)
@@ -21,16 +20,12 @@ export class CreateVersionItemDto {
   scope?: string;
 
   @IsOptional()
-  @IsBoolean()
-  breaking?: boolean = false;
-
-  @IsOptional()
-  @IsBoolean()
-  publicVisible?: boolean = false;
+  @IsEnum(Priority)
+  priority?: Priority = Priority.MEDIUM;
 
   @IsOptional()
   @IsEnum(DevState)
-  state?: DevState = DevState.TODO;
+  state?: DevState;
 
   @IsString()
   @IsNotEmpty()

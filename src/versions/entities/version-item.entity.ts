@@ -28,6 +28,13 @@ export enum DevState {
   DONE = 'done',
 }
 
+export enum Priority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  SUGGESTION = 'suggestion'
+}
+
 @Entity()
 export class VersionItem {
   @PrimaryGeneratedColumn('uuid')
@@ -42,11 +49,8 @@ export class VersionItem {
   @Column('varchar', { length: 100, nullable: true })
   scope?: string;
 
-  @Column({ type: 'boolean', default: false })
-  breaking?: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  publicVisible: boolean;
+  @Column({ type: 'enum', enum: Priority, default: Priority.MEDIUM })
+  priority: Priority;
 
   @Column({ type: 'varchar', length: 200, nullable: false })
   branch: string;
@@ -55,6 +59,9 @@ export class VersionItem {
   @Column({ type: 'enum', enum: DevState, default: DevState.TODO })
   state: DevState;
 
-  @ManyToOne(() => Version, (version) => version.items, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Version, (version) => version.items, {
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
   version: Version;
 }

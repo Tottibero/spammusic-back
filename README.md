@@ -15,3 +15,9 @@ docker-compose up -d
 ```
 git push heroku main
 ```
+
+# Migraciones
+
+npm run migration:generate src/migrations/MigrationName
+
+npm run migration:run
