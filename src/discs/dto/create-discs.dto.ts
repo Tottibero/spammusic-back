@@ -46,5 +46,8 @@ export class CreateDiscDto {
   ep?: boolean;
 
   @IsOptional()
+  debut?: boolean;
+
+  @IsOptional()
   featured?: boolean;
 }

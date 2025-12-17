@@ -33,6 +33,9 @@ export class Disc {
   @Column('boolean', { nullable: true })
   ep: boolean = false;
 
+  @Column('boolean', { nullable: true })
+  debut: boolean = false;
+
   @Column('varchar', { length: 255, nullable: true })
   link: string;
 
