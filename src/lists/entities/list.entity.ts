@@ -11,7 +11,12 @@ export enum ListType {
 export enum ListStatus {
   NEW = 'new',
   ASSIGNED = 'assigned',
-  PUBLISHED = 'smpublished',
+  COMPLETED = 'completed',
+  REVISED = 'revised',
+  WITHIMAGE = 'withimage',
+  SCHEDULED = 'scheduled',
+  WEBPUBLISHED = 'webpublished',
+  SMPUBLISHED = 'smpublished',
 }
 
 @Entity()
