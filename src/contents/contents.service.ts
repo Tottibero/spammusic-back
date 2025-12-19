@@ -55,8 +55,8 @@ export class ContentsService {
       const reunionTitle = content.name;
 
       const reunion = this.reunionRepo.create({
-        titulo: reunionTitle,
-        fecha: reunionDate,
+        title: reunionTitle,
+        date: reunionDate,
       });
       const savedReunion = await this.reunionRepo.save(reunion);
 

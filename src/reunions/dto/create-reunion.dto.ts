@@ -4,10 +4,10 @@ import { IsNotEmpty, IsString, IsDate } from 'class-validator';
 export class CreateReunionDto {
   @IsString()
   @IsNotEmpty()
-  titulo: string;
+  title: string;
 
   @Type(() => Date)
   @IsDate()
   @IsNotEmpty()
-  fecha: Date;
+  date: Date;
 }
