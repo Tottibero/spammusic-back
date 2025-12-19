@@ -1,0 +1,22 @@
+import { Module } from '@nestjs/common';
+import { ContentsService } from './contents.service';
+import { ContentsController } from './contents.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Content } from './entities/content.entity';
+import { User } from 'src/auth/entities/user.entity';
+import { Reunion } from 'src/reunions/entities/reunion.entity';
+
+import { ListsModule } from 'src/lists/list.module';
+import { PointsModule } from 'src/points/points.module';
+
+import { ContentSchedulerService } from './content-scheduler.service';
+
+import { forwardRef } from '@nestjs/common';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Content, User, Reunion]), forwardRef(() => ListsModule), PointsModule],
+  controllers: [ContentsController],
+  providers: [ContentsService, ContentSchedulerService],
+  exports: [ContentsService, TypeOrmModule],
+})
+export class ContentsModule { }

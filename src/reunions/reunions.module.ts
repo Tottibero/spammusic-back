@@ -10,4 +10,4 @@ import { ReunionController } from './reunions.controller';
   providers: [ReunionService],
   exports: [ReunionService, TypeOrmModule], // Exporta el servicio y el repositorio (TypeOrmModule)
 })
-export class ReunionsModule {}
+export class ReunionsModule { }

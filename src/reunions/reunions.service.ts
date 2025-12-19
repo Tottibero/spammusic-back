@@ -9,7 +9,7 @@ export class ReunionService {
   constructor(
     @InjectRepository(Reunion)
     private readonly reunionRepository: Repository<Reunion>,
-  ) {}
+  ) { }
 
   async createReunion(createReunionDto: CreateReunionDto): Promise<Reunion> {
     const reunion = this.reunionRepository.create(createReunionDto);

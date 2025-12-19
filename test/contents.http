@@ -1,0 +1,205 @@
+@baseUrl = http://localhost:3000/api
+@username = tottibero
+@password = Spammusic2025
+
+### =========================================
+# LOGIN
+# =========================================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### =========================================
+# 1. CREATE CONTENT (Article)
+# =========================================
+# @name createArticle
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "article",
+  "name": "My first article",
+  "notes": "This is a test article about music",
+  "publicationDate": "2025-12-17",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 2. CREATE CONTENT (Photos)
+# =========================================
+# @name createPhotos
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "photos",
+  "name": "Concert gallery 2025",
+  "notes": "Summer festival photos",
+  "publicationDate": "2025-12-15",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 3. CREATE CONTENT (List)
+# =========================================
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "list",
+  "name": "Top 10 albums of the year",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 4. CREATE CONTENT (Radar)
+# =========================================
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "radar",
+  "name": "Emerging artists",
+  "notes": "New talents to watch",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 5. CREATE CONTENT (Best)
+# =========================================
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "best",
+  "name": "Best of the month",
+  "publicationDate": "2025-12-01",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 6. LIST ALL CONTENTS
+# =========================================
+GET {{baseUrl}}/contents
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 7. GET CONTENT BY ID
+# =========================================
+GET {{baseUrl}}/contents/{{createArticle.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 8. UPDATE CONTENT
+# =========================================
+PATCH {{baseUrl}}/contents/{{createArticle.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "name": "My first article (updated)",
+  "notes": "Updated content with more information"
+}
+
+### =========================================
+# 9. UPDATE CONTENT TYPE
+# =========================================
+PATCH {{baseUrl}}/contents/{{createPhotos.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "list"
+}
+
+### =========================================
+# 10. DELETE CONTENT
+# =========================================
+DELETE {{baseUrl}}/contents/{{createPhotos.response.body.id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 11. GET CONTENT BY MONTH (December 2025)
+# =========================================
+GET {{baseUrl}}/contents/by-month?year=2025&month=12
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 12. GET CONTENT BY MONTH (January 2026)
+# =========================================
+GET {{baseUrl}}/contents/by-month?year=2026&month=1
+Authorization: Bearer {{login.response.body.token}}
+
+### =========================================
+# 13. CLEAR PUBLICATION DATE (set to null)
+# =========================================
+PATCH {{baseUrl}}/contents/{{createArticle.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "publicationDate": null
+}
+
+### =========================================
+# 14. CREATE CONTENT (Video)
+# =========================================
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "video",
+  "name": "Interview with The Band",
+  "notes": "Video interview backstage",
+  "publicationDate": "2025-12-20",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 15. CREATE CONTENT (Meeting)
+# =========================================
+# @name createMeeting
+POST {{baseUrl}}/contents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "type": "meeting",
+  "name": "Weekly planning meeting",
+  "notes": "Discussing next month's content",
+  "publicationDate": "2025-12-22",
+  "authorId": "{{login.response.body.id}}"
+}
+
+### =========================================
+# 16. LINK MEETING TO REUNION
+# =========================================
+PATCH {{baseUrl}}/contents/{{createMeeting.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "reunionId": "your-reunion-id-here"
+}
+
+### =========================================
+# 17. UNLINK MEETING FROM REUNION
+# =========================================
+PATCH {{baseUrl}}/contents/{{createMeeting.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "reunionId": null
+}

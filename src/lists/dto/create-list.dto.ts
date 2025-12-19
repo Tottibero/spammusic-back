@@ -26,4 +26,8 @@ export class CreateListDto {
   @IsOptional()
   @IsDateString()
   releaseDate?: string | null; // 👈 string (ISO), no Date
+
+  @IsOptional()
+  @IsDateString()
+  closeDate?: string | null;
 }

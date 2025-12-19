@@ -98,7 +98,7 @@ export class AuthService {
     try {
       const users = await this.userRepository
         .createQueryBuilder('user')
-        .select(['user.id', 'user.username', 'user.email', 'user.roles'])
+        .select(['user.id', 'user.username', 'user.email', 'user.roles', 'user.image'])
         .where(':role = ANY(user.roles)', { role: 'riffValley' }) // replace 'admin' with your role
         .getMany();
 

@@ -19,7 +19,7 @@ import { User } from 'src/auth/entities/user.entity';
 
 @Controller('lists')
 export class ListsController {
-  constructor(private readonly listsServices: ListsService) {}
+  constructor(private readonly listsServices: ListsService) { }
 
   @Post()
   create(@Body() createListDto: CreateListDto) {
@@ -44,6 +44,46 @@ export class ListsController {
     return this.listsServices.findNext();
   }
 
+  @Get('weekly/current')
+  findCurrentWeekly() {
+    return this.listsServices.findCurrentWeeklyLists();
+  }
+
+  @Get('weekly/past/:year/:month')
+  findPastWeeklyByMonth(
+    @Param('year') year: string,
+    @Param('month') month: string,
+  ) {
+    return this.listsServices.findPastWeeklyListsByMonth(
+      parseInt(year),
+      parseInt(month),
+    );
+  }
+
+  @Get('special')
+  findAllSpecial() {
+    return this.listsServices.findAllSpecialLists();
+  }
+
+  @Get('month/current')
+  findCurrentMonth() {
+    return this.listsServices.findCurrentMonthLists();
+  }
+
+  @Get('month/past/:year')
+  findPastMonthByYear(
+    @Param('year') year: string, // Only year is passed
+  ) {
+    return this.listsServices.findPastMonthListsByYear(
+      parseInt(year),
+    );
+  }
+
+  @Post('weekly/create')
+  createWeekly() {
+    return this.listsServices.createWeeklyList();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.listsServices.findOne(id);
@@ -58,7 +98,7 @@ export class ListsController {
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.listsServices.remove(id);
+  removeList(@Param('id', ParseUUIDPipe) id: string) {
+    return this.listsServices.removeList(id);
   }
 }

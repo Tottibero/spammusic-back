@@ -4,13 +4,16 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  Inject,
+  forwardRef
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, MoreThan, Not, Repository } from 'typeorm';
-import { List } from './entities/list.entity';
+import { Between, In, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { List, ListType, ListStatus } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { PaginationDto } from '../common/dtos/pagination.dto';
+import { Content } from 'src/contents/entities/content.entity';
 
 @Injectable()
 export class ListsService {
@@ -19,7 +22,9 @@ export class ListsService {
   constructor(
     @InjectRepository(List)
     private readonly listRepository: Repository<List>,
-  ) {}
+    @InjectRepository(Content)
+    private readonly contentRepository: Repository<Content>,
+  ) { }
 
   async create(createListDto: CreateListDto) {
     try {
@@ -37,7 +42,7 @@ export class ListsService {
     const whereConditions: any = {};
 
     if (statusExclusions.length > 0) {
-      whereConditions.status = Not(In(statusExclusions)); // Corrección: Usar Not(In()) en lugar de $not y $in
+      whereConditions.status = Not(In(statusExclusions));
     }
 
     const [lists, totalItems] = await this.listRepository.findAndCount({
@@ -68,7 +73,7 @@ export class ListsService {
 
     const lists = await this.listRepository.find({
       where: {
-        releaseDate: Between(today, twoWeeksFromToday), // Usa Between para definir el rango
+        releaseDate: Between(today, twoWeeksFromToday),
       },
       order: {
         releaseDate: 'ASC',
@@ -84,7 +89,7 @@ export class ListsService {
 
     const lists = await this.listRepository.find({
       where: {
-        releaseDate: MoreThan(twoWeeksFromToday), // Usa Between para definir el rango
+        releaseDate: MoreThan(twoWeeksFromToday),
       },
       order: {
         releaseDate: 'ASC',
@@ -112,15 +117,188 @@ export class ListsService {
 
     try {
       await this.listRepository.save(list);
+
+      // Update associated Content if sync required
+      if (updateListDto.closeDate || updateListDto.releaseDate || updateListDto.listDate) {
+        const content = await this.contentRepository.findOne({ where: { list: { id: list.id } } });
+
+        if (content) {
+          let changed = false;
+          if (list.closeDate) {
+            const listCloseDate = new Date(list.closeDate);
+            const contentCloseDate = content.closeDate ? new Date(content.closeDate) : null;
+            if (!contentCloseDate || contentCloseDate.getTime() !== listCloseDate.getTime()) {
+              content.closeDate = listCloseDate;
+              changed = true;
+            }
+          }
+
+          // Sync publicationDate with listDate
+          if (list.listDate) {
+            const listDate = new Date(list.listDate);
+            const contentDate = content.publicationDate ? new Date(content.publicationDate) : null;
+            if (!contentDate || contentDate.getTime() !== listDate.getTime()) {
+              content.publicationDate = listDate;
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            await this.contentRepository.save(content);
+            this.logger.log(`Updated content ${content.id} from list sync`);
+          }
+        }
+      }
+
       return list;
     } catch (error) {
       this.handleDbExceptions(error);
     }
   }
 
-  async remove(id: string) {
-    const list = await this.listRepository.delete({ id });
-    return list;
+  async removeList(id: string) {
+    const list = await this.listRepository.findOne({ where: { id } });
+
+    if (!list) {
+      throw new NotFoundException(`List with id ${id} not found`);
+    }
+
+    // Find and delete associated content
+    const content = await this.contentRepository.findOne({ where: { list: { id: list.id } } });
+    if (content) {
+      await this.contentRepository.remove(content);
+      this.logger.log(`Deleted associated content ${content.id}`);
+    }
+
+    return this.listRepository.remove(list);
+  }
+
+  // Obtener todas las listas especiales
+  async findAllSpecialLists() {
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.SPECIAL,
+      },
+      order: {
+        name: 'ASC',
+      },
+    });
+    return lists;
+  }
+
+  // Obtener listas mensuales actuales y futuras
+  async findCurrentMonthLists() {
+    const today = new Date();
+    today.setDate(1); // Set to first day of current month
+    today.setHours(0, 0, 0, 0);
+
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.MONTH,
+        listDate: MoreThanOrEqual(today),
+      },
+      order: {
+        listDate: 'ASC',
+      },
+    });
+    return lists;
+  }
+
+  // Obtener listas mensuales pasadas por año
+  async findPastMonthListsByYear(year: number) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+    endDate.setHours(23, 59, 59, 999);
+
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.MONTH,
+        listDate: Between(startDate, endDate),
+      },
+      order: {
+        listDate: 'DESC',
+      },
+    });
+    return lists;
+  }
+
+  // Obtener listas semanales actuales y futuras
+  async findCurrentWeeklyLists() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.WEEK,
+        listDate: MoreThanOrEqual(today),
+      },
+      order: {
+        listDate: 'ASC',
+      },
+    });
+    return lists;
+  }
+
+  // Obtener listas semanales pasadas por año y mes
+  async findPastWeeklyListsByMonth(year: number, month: number) {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.WEEK,
+        listDate: Between(startDate, endDate),
+      },
+      order: {
+        listDate: 'DESC',
+      },
+    });
+    return lists;
+  }
+
+  async createWeeklyList(date?: Date) {
+    let targetDate: Date;
+
+    if (date) {
+      targetDate = new Date(date);
+    } else {
+      const now = new Date();
+      // Calcular el próximo lunes
+      const currentDay = now.getDay();
+      const daysUntilMonday = currentDay === 0 ? 1 : (8 - currentDay) % 7 || 7;
+
+      targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + daysUntilMonday);
+    }
+
+    targetDate.setHours(0, 0, 0, 0);
+
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    const currentMonthName = monthNames[targetDate.getMonth()];
+    const weekOfMonth = Math.ceil(targetDate.getDate() / 7);
+
+    const name = `Discos ${currentMonthName} Semana ${weekOfMonth}`;
+
+    try {
+      const list = this.listRepository.create({
+        name,
+        type: ListType.WEEK,
+        status: ListStatus.NEW,
+        listDate: targetDate,
+        releaseDate: targetDate,
+      });
+
+      await this.listRepository.save(list);
+      this.logger.log(`Weekly list created: ${name}`);
+      return list;
+    } catch (error) {
+      this.handleDbExceptions(error);
+    }
   }
 
   private handleDbExceptions(error: any) {

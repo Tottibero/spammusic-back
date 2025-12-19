@@ -11,5 +11,6 @@ import { ReunionsModule } from 'src/reunions/reunions.module';
   ],
   controllers: [PointController],
   providers: [PointService],
+  exports: [TypeOrmModule],
 })
-export class PointsModule {}
+export class PointsModule { }

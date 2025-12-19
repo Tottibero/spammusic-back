@@ -13,7 +13,7 @@ import { CreateReunionDto } from './dto/create-reunion.dto';
 
 @Controller('reunions')
 export class ReunionController {
-  constructor(private readonly reunionService: ReunionService) {}
+  constructor(private readonly reunionService: ReunionService) { }
 
   @Post()
   async create(@Body() createReunionDto: CreateReunionDto) {
