@@ -2,8 +2,8 @@
 import { IsInt, IsOptional, IsString, IsISO8601, Max, Min, IsIn } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
-const ESTADOS = ['actualizada','publicada','para_publicar','por_actualizar','en_desarrollo'] as const;
-const TIPOS = ['festival','especial','genero','otras'] as const;
+const ESTADOS = ['publicada', 'para_publicar', 'por_actualizar', 'en_desarrollo'] as const;
+const TIPOS = ['festival', 'especial', 'genero', 'otras'] as const;
 type SpotifyEstado = typeof ESTADOS[number];
 type SpotifyTipo = typeof TIPOS[number];
 

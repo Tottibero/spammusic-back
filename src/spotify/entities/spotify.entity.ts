@@ -1,7 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 export enum SpotifyEstado {
-  ACTUALIZADA = 'actualizada',
   PUBLICADA = 'publicada',
   PARA_PUBLICAR = 'para_publicar',
   POR_ACTUALIZAR = 'por_actualizar',

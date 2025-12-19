@@ -7,7 +7,6 @@ import { UpdateSpotifyDto } from './dto/update-spotify.dto';
 
 // si ya tienes estos tipos en otro archivo, reutilízalos
 export type SpotifyEstado =
-  | 'actualizada'
   | 'publicada'
   | 'para_publicar'
   | 'por_actualizar'
@@ -31,7 +30,7 @@ export class SpotifyService {
   constructor(
     @InjectRepository(Spotify)
     private readonly repo: Repository<Spotify>,
-  ) {}
+  ) { }
 
   async create(createSpotifyDto: CreateSpotifyDto): Promise<Spotify> {
     const entity = this.repo.create({
@@ -59,9 +58,9 @@ export class SpotifyService {
     // Si hay q, hacemos OR sobre nombre/enlace con ILIKE
     const where = q
       ? [
-          { ...baseWhere, nombre: ILike(`%${q}%`) },
-          { ...baseWhere, enlace: ILike(`%${q}%`) },
-        ]
+        { ...baseWhere, nombre: ILike(`%${q}%`) },
+        { ...baseWhere, enlace: ILike(`%${q}%`) },
+      ]
       : baseWhere;
 
     return this.repo.find({
@@ -98,5 +97,19 @@ export class SpotifyService {
     const entity = await this.findOne(id);
     await this.repo.remove(entity);
     return { ok: true };
+  }
+
+  async findFestivals(): Promise<Spotify[]> {
+    return this.repo.find({
+      where: { tipo: 'festival' as any }, // 'as any' to avoid enum checks if not imported
+      order: { fechaActualizacion: 'ASC' },
+    });
+  }
+
+  async findGenres(): Promise<Spotify[]> {
+    return this.repo.find({
+      where: { tipo: 'genero' as any },
+      order: { fechaActualizacion: 'ASC' },
+    });
   }
 }
