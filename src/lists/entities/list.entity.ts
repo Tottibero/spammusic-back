@@ -11,7 +11,7 @@ export enum ListType {
 export enum ListStatus {
   NEW = 'new',
   ASSIGNED = 'assigned',
-  PUBLISHED = 'published',
+  PUBLISHED = 'smpublished',
 }
 
 @Entity()

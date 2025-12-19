@@ -5,18 +5,19 @@ export class UpdateListStatusEnum1766066905027 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TYPE "public"."list_status_enum" RENAME TO "list_status_enum_old"`);
-        await queryRunner.query(`CREATE TYPE "public"."list_status_enum" AS ENUM('new', 'assigned', 'published')`);
+        await queryRunner.query(`CREATE TYPE "public"."list_status_enum" AS ENUM('new', 'assigned', 'smpublished')`);
         await queryRunner.query(`
             ALTER TABLE "list" 
             ALTER COLUMN "status" 
             TYPE "public"."list_status_enum" 
             USING (
                 CASE "status"::text
-                    WHEN 'smpublished' THEN 'published'
-                    WHEN 'webpublished' THEN 'published'
+                    WHEN 'smpublished' THEN 'smpublished'
+                    WHEN 'webpublished' THEN 'smpublished'
+                    WHEN 'published' THEN 'smpublished'
+                    WHEN 'completed' THEN 'smpublished'
                     WHEN 'new' THEN 'new'
                     WHEN 'assigned' THEN 'assigned'
-                    WHEN 'published' THEN 'published'
                     ELSE 'assigned'
                 END
             )::"public"."list_status_enum"
