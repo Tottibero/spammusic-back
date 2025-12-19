@@ -22,7 +22,7 @@ export class DiscsService {
   constructor(
     @InjectRepository(Disc)
     private readonly discRepository: Repository<Disc>,
-  ) {}
+  ) { }
 
   async create(createDiscDto: CreateDiscDto) {
     try {
@@ -38,7 +38,7 @@ export class DiscsService {
     const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
     const userId = user.id;
 
-    const today = new Date();
+
 
     // Calcula el rango de fechas si se especifica el mes
     let startDate: Date | undefined;
@@ -85,21 +85,18 @@ export class DiscsService {
           .from('rate', 'rate')
           .where('rate.discId = disc.id AND rate.rate IS NOT NULL');
       }, 'rateCount')
-      .where('disc.releaseDate <= :today', { today })
       // Agrega el conteo de comentarios para cada disco
       .addSelect((subQuery) => {
         return subQuery
           .select('COUNT(comment.id)', 'commentCount')
           .from('comment', 'comment')
           .where('comment.discId = disc.id');
-      }, 'commentCount')
-      .where('disc.releaseDate <= :today', { today });
+      }, 'commentCount');
 
     const totalItemsQueryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.artist', 'artist')
-      .leftJoin('disc.genre', 'genre')
-      .where('disc.releaseDate <= :today', { today });
+      .leftJoin('disc.genre', 'genre');
 
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
@@ -149,8 +146,8 @@ export class DiscsService {
       artist: {
         ...disc.artist,
         country: {
-            ...disc.artist.country,
-            name: disc.artist?.country?.name || null
+          ...disc.artist.country,
+          name: disc.artist?.country?.name || null
         },
       },
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
@@ -249,7 +246,7 @@ export class DiscsService {
         ...disc,
         artist: {
           ...disc.artist,
-          country: { 
+          country: {
             ...disc.artist.country,
             name: disc.artist?.country?.name || null
           },
@@ -332,7 +329,7 @@ export class DiscsService {
 
   async findTopRatedOrFeaturedAndStats(
     paginationDto: PaginationDto,
-    user: User, 
+    user: User,
     genreId?: string
   ): Promise<{
     discs: Disc[];
@@ -512,9 +509,9 @@ export class DiscsService {
     // --- Transformación de los datos para el formato esperado ---
     const processedDiscs = topRatedDiscs.map((disc: any) => ({
       ...disc,
-      artist: { 
-        name: disc.artistName, 
-        country: { 
+      artist: {
+        name: disc.artistName,
+        country: {
           id: disc.countryId,
           name: disc.countryName || null,
           isoCode: disc.countryIsoCode || null
@@ -523,10 +520,10 @@ export class DiscsService {
       genre: { name: disc.genreName, color: disc.genreColor },
       userRate: disc.userRateId
         ? {
-            id: disc.userRateId,
-            rate: parseFloat(disc.userRate) || null,
-            cover: parseFloat(disc.userCover) || null,
-          }
+          id: disc.userRateId,
+          rate: parseFloat(disc.userRate) || null,
+          cover: parseFloat(disc.userCover) || null,
+        }
         : null,
       favoriteId: disc.userFavoriteId || null,
       pendingId: disc.pendingId || null,

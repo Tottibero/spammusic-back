@@ -1,14 +1,14 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDate,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   Min,
-  ValidateNested,
 } from 'class-validator';
 import { ListStatus } from 'src/lists/entities/list.entity';
 
@@ -38,11 +38,17 @@ export class PaginationDto {
   voted?: boolean; // Permitir el parámetro `query` como opcional
 
   @IsOptional()
-  @IsArray() // Validación para asegurarse de que es un array
-  @ArrayMinSize(2) // El array debe contener al menos 2 elementos (startDate y endDate)
-  @ValidateNested({ each: true }) // Valida cada elemento del array
-  @Type(() => Date) // Convierte los elementos del array a tipo Date
-  dateRange?: [Date, Date]; // Parámetro `dateRange` opcional para el rango de fechas
+  @IsArray()
+  @ArrayMinSize(2)
+  @IsDate({ each: true })
+  @Transform(({ value }) => {
+    // Si viene como array de strings, lo convertimos a fechas
+    if (Array.isArray(value)) {
+      return value.map((v) => new Date(v));
+    }
+    return value;
+  })
+  dateRange?: [Date, Date];
 
   @IsOptional()
   @IsArray()
