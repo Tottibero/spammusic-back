@@ -60,9 +60,28 @@ export class ListsController {
     );
   }
 
+  @Get('video/current')
+  findCurrentVideo() {
+    return this.listsServices.findCurrentVideoLists();
+  }
+
+  @Get('video/past/:year')
+  findPastVideoByYear(
+    @Param('year') year: string, // Only year is passed
+  ) {
+    return this.listsServices.findPastVideoListsByYear(
+      parseInt(year),
+    );
+  }
+
   @Get('special')
   findAllSpecial() {
     return this.listsServices.findAllSpecialLists();
+  }
+
+  @Get('video')
+  findAllVideo() {
+    return this.listsServices.findAllVideoLists();
   }
 
   @Get('month/current')

@@ -6,6 +6,7 @@ export enum ListType {
   MONTH = 'month',
   WEEK = 'week',
   SPECIAL = 'special',
+  VIDEO = 'video',
 }
 
 export enum ListStatus {
@@ -34,6 +35,9 @@ export class List {
     nullable: true,
   })
   status?: ListStatus;
+
+  @Column({ type: 'boolean', default: false, nullable: true })
+  free: boolean;
 
   @Column({ type: 'date', nullable: true })
   listDate?: Date;

@@ -55,8 +55,8 @@ export class ContentsService {
       const reunionTitle = content.name;
 
       const reunion = this.reunionRepo.create({
-        titulo: reunionTitle,
-        fecha: reunionDate,
+        title: reunionTitle,
+        date: reunionDate,
       });
       const savedReunion = await this.reunionRepo.save(reunion);
 
@@ -83,9 +83,17 @@ export class ContentsService {
 
     const savedContent = await this.contentRepo.save(content);
 
-    // Auto-create Weekly List if type is RADAR
+    // Auto-create Weekly List if type is RADAR or BEST
     if (savedContent.type === ContentType.RADAR) {
       const list = await this.listsService.createWeeklyList(savedContent.publicationDate);
+      savedContent.list = list;
+      await this.contentRepo.save(savedContent);
+    } else if (savedContent.type === ContentType.BEST) {
+      const list = await this.listsService.createMonthlyList(savedContent.publicationDate);
+      savedContent.list = list;
+      await this.contentRepo.save(savedContent);
+    } else if (savedContent.type === ContentType.VIDEO) {
+      const list = await this.listsService.createVideoList(savedContent.publicationDate);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     }
@@ -157,8 +165,8 @@ export class ContentsService {
 
     const savedContent = await this.contentRepo.save(content);
 
-    // Sync with List (RADAR)
-    if (savedContent.type === ContentType.RADAR) {
+    // Sync with List (RADAR, BEST, VIDEO)
+    if (savedContent.type === ContentType.RADAR || savedContent.type === ContentType.BEST || savedContent.type === ContentType.VIDEO) {
       const contentWithList = await this.contentRepo.findOne({
         where: { id: savedContent.id },
         relations: ['list']
@@ -205,16 +213,23 @@ export class ContentsService {
   }
 
   async remove(id: string): Promise<void> {
-    const content = await this.findOne(id);
+    const content = await this.contentRepo.findOne({
+      where: { id },
+      relations: ['list', 'reunion']
+    });
 
-    // Check if it has a list associated to delete it as well
-    const contentWithList = await this.contentRepo.findOne({ where: { id }, relations: ['list'] });
+    if (!content) {
+      throw new NotFoundException(`Content with id ${id} not found`);
+    }
 
     await this.contentRepo.remove(content);
 
-    if (contentWithList && contentWithList.list) {
-      // Call removeList on service, which tries to delete content but won't find it, then deletes list.
-      await this.listsService.removeList(contentWithList.list.id);
+    if (content.list) {
+      await this.listsService.removeList(content.list.id);
+    }
+
+    if (content.reunion) {
+      await this.reunionRepo.delete(content.reunion.id);
     }
   }
 

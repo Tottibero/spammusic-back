@@ -19,6 +19,10 @@ export class CreateListDto {
   @IsEnum(ListStatus)
   status: ListStatus;
 
+  @IsBoolean()
+  @IsOptional()
+  free?: boolean | null;
+
   @IsOptional()
   @IsDateString()
   listDate?: string | null; // 👈 string (ISO), no Date

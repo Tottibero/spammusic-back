@@ -13,10 +13,13 @@ export class Reunion {
   id: string;
 
   @Column({ type: 'varchar', length: 255 })
-  titulo: string;
+  title: string;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 
   @Column({ type: 'timestamp' })
-  fecha: Date;
+  date: Date;
 
   @OneToMany(() => Point, (point) => point.reunion, { cascade: true })
   points: Point[]; // Relación uno a muchos con la entidad Point
