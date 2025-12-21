@@ -57,5 +57,13 @@ export class PaginationDto {
 
   @IsOptional()
   @IsString()
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  countryId?: string;
+
+  @IsOptional()
+  @IsString()
   orderBy?: string;
 }

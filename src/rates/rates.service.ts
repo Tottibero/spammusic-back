@@ -35,7 +35,7 @@ export class RatesService {
     @InjectRepository(Rate)
     private readonly rateRepository: Repository<Rate>,
     // private readonly discRespository: Repository<Disc>,
-  ) {}
+  ) { }
 
   async create(createRateDto: CreateRateDto, user: User) {
     try {
@@ -47,7 +47,7 @@ export class RatesService {
       if (!disc) {
         throw new NotFoundException(`Disc with id ${discId} not found`);
       }
-      
+
       // Check if rate already exists for this user and disc
       const existingRate = await this.rateRepository.findOne({
         where: {
@@ -90,6 +90,7 @@ export class RatesService {
       dateRange,
       genre,
       type,
+      country,
     } = paginationDto;
     const userId = user.id;
 
@@ -154,6 +155,7 @@ export class RatesService {
       .createQueryBuilder('rate')
       .leftJoin('rate.disc', 'disc')
       .leftJoin('disc.artist', 'artist')
+      .leftJoin('artist.country', 'country')
       .leftJoin('disc.genre', 'genre')
       .leftJoin(
         'favorite',
@@ -197,6 +199,17 @@ export class RatesService {
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    if (country) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(country);
+      if (isUUID) {
+        queryBuilder.andWhere('country.id = :country', { country });
+        totalItemsQueryBuilder.andWhere('country.id = :country', { country });
+      } else {
+        queryBuilder.andWhere('country.name = :country', { country });
+        totalItemsQueryBuilder.andWhere('country.name = :country', { country });
+      }
     }
 
     const ALLOWED_ORDER_FIELDS = new Set<string>([
