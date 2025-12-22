@@ -24,6 +24,7 @@ import { CommentsModule } from './comments/comments.module';
 import { VersionsModule } from './versions/versions.module';
 import { SpotifyModule } from './spotify/spotify.module';
 import { ContentsModule } from './contents/contents.module';
+import { ArticlesModule } from './articles/articles.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ContentsModule } from './contents/contents.module';
     VersionsModule,
     SpotifyModule,
     ContentsModule,
+    ArticlesModule,
   ],
 })
 export class AppModule { }

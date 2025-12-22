@@ -1,6 +1,8 @@
 import { User } from 'src/auth/entities/user.entity';
 import { Reunion } from 'src/reunions/entities/reunion.entity';
 import { List } from 'src/lists/entities/list.entity';
+import { Spotify } from 'src/spotify/entities/spotify.entity';
+import { Article } from 'src/articles/entities/article.entity';
 import {
     Column,
     Entity,
@@ -13,11 +15,11 @@ import {
 export enum ContentType {
     ARTICLE = 'article',
     PHOTOS = 'photos',
-    LIST = 'list',
+    SPOTIFY = 'spotify',
     RADAR = 'radar',
     BEST = 'best',
     VIDEO = 'video',
-    MEETING = 'meeting',
+    REUNION = 'reunion',
 }
 
 @Entity('content')
@@ -56,4 +58,12 @@ export class Content {
     @OneToOne(() => List, { nullable: true })
     @JoinColumn()
     list?: List;
+
+    @OneToOne(() => Spotify, (spotify) => spotify.content, { nullable: true })
+    @JoinColumn()
+    spotify?: Spotify;
+
+    @OneToOne(() => Article, (article) => article.content, { nullable: true })
+    @JoinColumn()
+    article?: Article;
 }

@@ -6,6 +6,7 @@ export enum ListType {
   MONTH = 'month',
   WEEK = 'week',
   SPECIAL = 'special',
+  VIDEO = 'video',
 }
 
 export enum ListStatus {
@@ -48,6 +49,9 @@ export class List {
 
   @Column({ type: 'date', nullable: true })
   closeDate?: Date;
+
+  @Column({ type: 'boolean', default: false })
+  free: boolean;
 
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,

@@ -79,6 +79,16 @@ export class ListsController {
     );
   }
 
+  @Get('video/current')
+  findCurrentVideos() {
+    return this.listsServices.findCurrentVideoLists();
+  }
+
+  @Get('video/past/:year')
+  findPastVideosByYear(@Param('year') year: string) {
+    return this.listsServices.findPastVideoListsByYear(parseInt(year));
+  }
+
   @Post('weekly/create')
   createWeekly() {
     return this.listsServices.createWeeklyList();

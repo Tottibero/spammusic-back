@@ -19,7 +19,17 @@ import { ListSpotifyQueryDto } from './dto/list-spotify.query.dto';
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 @Controller('spotify')
 export class SpotifyController {
-  constructor(private readonly spotifyService: SpotifyService) {}
+  constructor(private readonly spotifyService: SpotifyService) { }
+
+  @Get('festivals')
+  findFestivals(@Query() query: ListSpotifyQueryDto) {
+    return this.spotifyService.findAll({ ...query, type: 'festival' });
+  }
+
+  @Get('genres')
+  findGenres(@Query() query: ListSpotifyQueryDto) {
+    return this.spotifyService.findAll({ ...query, type: ['genero', 'especial', 'otras'] });
+  }
 
   @Post()
   create(@Body() createSpotifyDto: CreateSpotifyDto) {
