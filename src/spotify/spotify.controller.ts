@@ -21,6 +21,16 @@ import { ListSpotifyQueryDto } from './dto/list-spotify.query.dto';
 export class SpotifyController {
   constructor(private readonly spotifyService: SpotifyService) { }
 
+  @Get('festivals')
+  findFestivals(@Query() query: ListSpotifyQueryDto) {
+    return this.spotifyService.findAll({ ...query, type: 'festival' });
+  }
+
+  @Get('genres')
+  findGenres(@Query() query: ListSpotifyQueryDto) {
+    return this.spotifyService.findAll({ ...query, type: ['genero', 'especial', 'otras'] });
+  }
+
   @Post()
   create(@Body() createSpotifyDto: CreateSpotifyDto) {
     return this.spotifyService.create(createSpotifyDto);
@@ -31,15 +41,7 @@ export class SpotifyController {
     return this.spotifyService.findAll(query);
   }
 
-  @Get('festivals')
-  findFestivals() {
-    return this.spotifyService.findFestivals();
-  }
 
-  @Get('genres')
-  findGenres() {
-    return this.spotifyService.findGenres();
-  }
 
   @Get(':id')
   findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {

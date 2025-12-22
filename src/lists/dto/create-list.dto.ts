@@ -34,4 +34,8 @@ export class CreateListDto {
   @IsOptional()
   @IsDateString()
   closeDate?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  free?: boolean;
 }

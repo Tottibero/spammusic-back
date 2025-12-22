@@ -2,10 +2,10 @@
 import { IsInt, IsOptional, IsString, IsISO8601, Max, Min, IsIn } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
-const ESTADOS = ['publicada', 'para_publicar', 'por_actualizar', 'en_desarrollo'] as const;
+const ESTADOS = ['actualizada', 'publicada', 'para_publicar', 'por_actualizar', 'en_desarrollo'] as const;
 const TIPOS = ['festival', 'especial', 'genero', 'otras'] as const;
-type SpotifyEstado = typeof ESTADOS[number];
-type SpotifyTipo = typeof TIPOS[number];
+type SpotifyStatus = typeof ESTADOS[number];
+type SpotifyType = typeof TIPOS[number];
 
 export class ListSpotifyQueryDto {
   @IsOptional() @IsString()
@@ -14,12 +14,12 @@ export class ListSpotifyQueryDto {
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.toLowerCase() : value))
   @IsIn(ESTADOS as readonly string[])
-  estado?: SpotifyEstado;
+  status?: SpotifyStatus;
 
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.toLowerCase() : value))
   @IsIn(TIPOS as readonly string[])
-  tipo?: SpotifyTipo;
+  type?: SpotifyType;
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(0)
   offset?: number;

@@ -12,7 +12,12 @@ export enum ListType {
 export enum ListStatus {
   NEW = 'new',
   ASSIGNED = 'assigned',
-  PUBLISHED = 'published',
+  COMPLETED = 'completed',
+  REVISED = 'revised',
+  WITHIMAGE = 'withimage',
+  SCHEDULED = 'scheduled',
+  WEBPUBLISHED = 'webpublished',
+  SMPUBLISHED = 'smpublished',
 }
 
 @Entity()
@@ -47,6 +52,9 @@ export class List {
 
   @Column({ type: 'date', nullable: true })
   closeDate?: Date;
+
+  @Column({ type: 'boolean', default: false })
+  free: boolean;
 
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,

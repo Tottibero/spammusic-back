@@ -51,7 +51,7 @@ export class ContentSchedulerService {
         try {
             await this.contentsService.create({
                 name: titleReunion,
-                type: ContentType.MEETING,
+                type: ContentType.REUNION,
                 authorId: author.id,
                 publicationDate: nextWednesday.toISOString(),
             });
