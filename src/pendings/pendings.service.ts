@@ -20,7 +20,7 @@ export class PendingsService {
   constructor(
     @InjectRepository(Pending)
     private readonly pendingRepository: Repository<Pending>,
-  ) {}
+  ) { }
 
   async create(createPendingDto: CreatePendingDto, user: User) {
     try {
@@ -47,7 +47,7 @@ export class PendingsService {
   }
 
   async findAllByUser(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange, genre, country } = paginationDto;
     const userId = user.id;
 
     // Manejo del rango de fechas
@@ -130,6 +130,15 @@ export class PendingsService {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
 
+    if (country) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(country);
+      if (isUUID) {
+        queryBuilder.andWhere('country.id = :country', { country });
+      } else {
+        queryBuilder.andWhere('country.name = :country', { country });
+      }
+    }
+
     queryBuilder
       .take(limit)
       .skip(offset)
@@ -148,14 +157,14 @@ export class PendingsService {
           country: pending.disc.artist?.country || null,
         },
         userPending: pending.id,
-        voteCount: parseInt(raw[index].rateCount, 10) || null,    
-        commentCount: parseInt(raw[index].commentCount, 10) || 0,  
+        voteCount: parseInt(raw[index].rateCount, 10) || null,
+        commentCount: parseInt(raw[index].commentCount, 10) || 0,
         userRate: raw[index].rateId
           ? {
-              id: raw[index].rateId,
-              rate: raw[index].userRate,
-              cover: raw[index].userCover,
-            }
+            id: raw[index].rateId,
+            rate: raw[index].userRate,
+            cover: raw[index].userCover,
+          }
           : null,
         averageRate: raw[index].averageRate
           ? parseFloat(raw[index].averageRate)
@@ -175,6 +184,7 @@ export class PendingsService {
       .createQueryBuilder('pending')
       .leftJoin('pending.disc', 'disc')
       .leftJoin('disc.artist', 'artist')
+      .leftJoin('artist.country', 'country')
       .leftJoin('disc.genre', 'genre')
       .where('pending.userId = :userId', { userId });
 
@@ -195,6 +205,15 @@ export class PendingsService {
 
     if (genre) {
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    if (country) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(country);
+      if (isUUID) {
+        totalItemsQueryBuilder.andWhere('country.id = :country', { country });
+      } else {
+        totalItemsQueryBuilder.andWhere('country.name = :country', { country });
+      }
     }
 
     const totalItems = await totalItemsQueryBuilder.getCount();
