@@ -6,12 +6,13 @@ import { List } from './entities/list.entity';
 import { AuthModule } from 'src/auth/auth.module';
 
 import { ContentsModule } from 'src/contents/contents.module';
+import { Content } from 'src/contents/entities/content.entity';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
   controllers: [ListsController], // Controllers go here
   providers: [ListsService], // Providers (services) go here
-  imports: [TypeOrmModule.forFeature([List]), AuthModule, forwardRef(() => ContentsModule)], // Ensure the List entity is registered
+  imports: [TypeOrmModule.forFeature([List, Content]), AuthModule, forwardRef(() => ContentsModule)], // Ensure the List entity is registered
   exports: [ListsService],
 })
 export class ListsModule { }

@@ -60,9 +60,28 @@ export class ListsController {
     );
   }
 
+  @Get('video/current')
+  findCurrentVideo() {
+    return this.listsServices.findCurrentVideoLists();
+  }
+
+  @Get('video/past/:year')
+  findPastVideoByYear(
+    @Param('year') year: string, // Only year is passed
+  ) {
+    return this.listsServices.findPastVideoListsByYear(
+      parseInt(year),
+    );
+  }
+
   @Get('special')
   findAllSpecial() {
     return this.listsServices.findAllSpecialLists();
+  }
+
+  @Get('video')
+  findAllVideo() {
+    return this.listsServices.findAllVideoLists();
   }
 
   @Get('month/current')
@@ -77,6 +96,16 @@ export class ListsController {
     return this.listsServices.findPastMonthListsByYear(
       parseInt(year),
     );
+  }
+
+  @Get('video/current')
+  findCurrentVideos() {
+    return this.listsServices.findCurrentVideoLists();
+  }
+
+  @Get('video/past/:year')
+  findPastVideosByYear(@Param('year') year: string) {
+    return this.listsServices.findPastVideoListsByYear(parseInt(year));
   }
 
   @Post('weekly/create')

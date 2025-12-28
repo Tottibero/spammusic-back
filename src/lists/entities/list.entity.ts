@@ -6,17 +6,13 @@ export enum ListType {
   MONTH = 'month',
   WEEK = 'week',
   SPECIAL = 'special',
+  VIDEO = 'video',
 }
 
 export enum ListStatus {
   NEW = 'new',
   ASSIGNED = 'assigned',
-  COMPLETED = 'completed',
-  REVISED = 'revised',
-  WITHIMAGE = 'withimage',
-  SCHEDULED = 'scheduled',
-  WEBPUBLISHED = 'webpublished',
-  SMPUBLISHED = 'smpublished',
+  PUBLISHED = 'published',
 }
 
 @Entity()
@@ -40,6 +36,9 @@ export class List {
   })
   status?: ListStatus;
 
+  @Column({ type: 'boolean', default: false, nullable: true })
+  free: boolean;
+
   @Column({ type: 'date', nullable: true })
   listDate?: Date;
 
@@ -48,6 +47,8 @@ export class List {
 
   @Column({ type: 'date', nullable: true })
   closeDate?: Date;
+
+
 
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,

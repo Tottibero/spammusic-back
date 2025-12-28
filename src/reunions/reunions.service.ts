@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reunion } from './entities/reunion.entity';
 import { CreateReunionDto } from './dto/create-reunion.dto';
+import { Content } from 'src/contents/entities/content.entity';
+import { ContentsService } from 'src/contents/contents.service';
 
 @Injectable()
 export class ReunionService {
   constructor(
     @InjectRepository(Reunion)
     private readonly reunionRepository: Repository<Reunion>,
+    @InjectRepository(Content)
+    private readonly contentRepository: Repository<Content>,
+    @Inject(forwardRef(() => ContentsService))
+    private readonly contentsService: ContentsService,
   ) { }
 
   async createReunion(createReunionDto: CreateReunionDto): Promise<Reunion> {
@@ -44,9 +50,18 @@ export class ReunionService {
   }
 
   async deleteReunion(id: string): Promise<void> {
-    const result = await this.reunionRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Reunion with ID ${id} not found`);
+    // Check if there is associated content
+    const content = await this.contentRepository.findOne({ where: { reunionId: id } });
+
+    if (content) {
+      // If content exists, remove content (which will cascade remove this reunion)
+      await this.contentsService.remove(content.id);
+    } else {
+      // If no content, just remove reunion
+      const result = await this.reunionRepository.delete(id);
+      if (result.affected === 0) {
+        throw new NotFoundException(`Reunion with ID ${id} not found`);
+      }
     }
   }
 }

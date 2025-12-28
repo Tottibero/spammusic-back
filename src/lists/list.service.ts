@@ -186,6 +186,19 @@ export class ListsService {
     return lists;
   }
 
+  // Obtener todas las listas de video
+  async findAllVideoLists() {
+    const lists = await this.listRepository.find({
+      where: {
+        type: ListType.VIDEO,
+      },
+      order: {
+        name: 'ASC',
+      },
+    });
+    return lists;
+  }
+
   // Obtener listas mensuales actuales y futuras
   async findCurrentMonthLists() {
     const today = new Date();
@@ -257,6 +270,80 @@ export class ListsService {
     return lists;
   }
 
+  // Obtener listas de video actuales y futuras (Mismá lógica que mensuales)
+  async findCurrentVideoLists() {
+    const today = new Date();
+    today.setDate(1);
+    today.setHours(0, 0, 0, 0);
+
+    return this.listRepository.find({
+      where: {
+        type: ListType.VIDEO,
+        listDate: MoreThanOrEqual(today),
+      },
+      order: {
+        listDate: 'ASC',
+      },
+    });
+  }
+
+  // Obtener listas de video pasadas por año
+  async findPastVideoListsByYear(year: number) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+    endDate.setHours(23, 59, 59, 999);
+
+    return this.listRepository.find({
+      where: {
+        type: ListType.VIDEO,
+        listDate: Between(startDate, endDate),
+      },
+      order: {
+        listDate: 'DESC',
+      },
+    });
+  }
+
+  async createVideoList(date?: Date) {
+    let targetDate: Date;
+
+    if (date) {
+      targetDate = new Date(date);
+    } else {
+      targetDate = new Date(); // Use current date if none provided
+    }
+
+    // Set to 1st of month to normalize if it represents a monthly video list
+    targetDate.setDate(1);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    const currentMonthName = monthNames[targetDate.getMonth()];
+    const name = `Videos ${currentMonthName}`; // Naming convention: Videos Enero, Videos Febrero...
+
+    try {
+      // Check if exists first? Or rely on unique constraint? Lists usually don't have unique name constraint but might be good to check.
+      // But for now, just create.
+      const list = this.listRepository.create({
+        name,
+        type: ListType.VIDEO,
+        status: ListStatus.NEW,
+        listDate: targetDate,
+        releaseDate: targetDate,
+      });
+
+      await this.listRepository.save(list);
+      this.logger.log(`Video list created: ${name}`);
+      return list;
+    } catch (error) {
+      this.handleDbExceptions(error);
+    }
+  }
+
   async createWeeklyList(date?: Date) {
     let targetDate: Date;
 
@@ -295,6 +382,46 @@ export class ListsService {
 
       await this.listRepository.save(list);
       this.logger.log(`Weekly list created: ${name}`);
+      return list;
+    } catch (error) {
+      this.handleDbExceptions(error);
+    }
+  }
+
+  async createMonthlyList(date?: Date) {
+    let targetDate: Date;
+
+    if (date) {
+      targetDate = new Date(date);
+    } else {
+      const now = new Date();
+      // Default to the first day of the next month
+      targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    }
+
+    targetDate.setHours(0, 0, 0, 0);
+
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    const monthName = monthNames[targetDate.getMonth()];
+    const year = targetDate.getFullYear();
+
+    const name = `Discos ${monthName} ${year}`;
+
+    try {
+      const list = this.listRepository.create({
+        name,
+        type: ListType.MONTH,
+        status: ListStatus.NEW,
+        listDate: targetDate,
+        releaseDate: targetDate,
+      });
+
+      await this.listRepository.save(list);
+      this.logger.log(`Monthly list created: ${name}`);
       return list;
     } catch (error) {
       this.handleDbExceptions(error);

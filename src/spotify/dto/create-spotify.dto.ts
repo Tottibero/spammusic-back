@@ -1,21 +1,25 @@
-import { IsEnum, IsISO8601, IsString, IsUrl, MaxLength } from 'class-validator';
-import { SpotifyEstado, SpotifyTipo } from '../entities/spotify.entity';
+import { IsEnum, IsISO8601, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from 'class-validator';
+import { SpotifyStatus, SpotifyType } from '../entities/spotify.entity';
 
 export class CreateSpotifyDto {
   @IsString()
   @MaxLength(200)
-  nombre: string;
+  name: string;
 
-  @IsEnum(SpotifyEstado)
-  estado: SpotifyEstado;
+  @IsEnum(SpotifyStatus)
+  status: SpotifyStatus;
 
   @IsUrl()
   @MaxLength(500)
-  enlace: string;
+  link: string;
 
-  @IsEnum(SpotifyTipo)
-  tipo: SpotifyTipo;
+  @IsEnum(SpotifyType)
+  type: SpotifyType;
 
   @IsISO8601()
-  fechaActualizacion: string; // vendrá como ISO8601
+  updateDate: string; // vendrá como ISO8601
+
+  @IsUUID()
+  @IsOptional()
+  userId?: string;
 }

@@ -36,4 +36,12 @@ export class CreateContentDto {
     @IsOptional()
     @IsUUID()
     reunionId?: string;
+
+    @IsOptional()
+    @IsUUID()
+    spotifyId?: string;
+
+    @IsOptional()
+    @IsUUID()
+    articleId?: string;
 }
