@@ -15,18 +15,20 @@ export class RatesStatsService {
         private readonly userRepository: Repository<User>,
     ) { }
 
-    async getUserStats(user: User) {
+    async getUserStats(user: User, year?: string) {
         const userId = user.id;
+        const filterYear = year || new Date().getFullYear().toString();
 
-        // 1. Total de votos (rates)
-        const totalVotes = await this.rateRepository.count({
-            where: {
-                user: { id: userId },
-                rate: Not(IsNull()), // Solo cuenta si tiene rate (voto)
-            },
-        });
+        // 1. Total de votos (rates) - filtered by year
+        const totalVotesResult = await this.rateRepository
+            .createQueryBuilder('rate')
+            .where('rate.userId = :userId', { userId })
+            .andWhere('rate.rate IS NOT NULL')
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :filterYear", { filterYear })
+            .getCount();
+        const totalVotes = totalVotesResult;
 
-        // 2. Votos por género
+        // 2. Votos por género - filtered by year
         const votesByGenre = await this.rateRepository
             .createQueryBuilder('rate')
             .innerJoin('rate.disc', 'disc')
@@ -35,6 +37,7 @@ export class RatesStatsService {
             .addSelect('COUNT(rate.id)', 'count')
             .where('rate.userId = :userId', { userId })
             .andWhere('rate.rate IS NOT NULL')
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :filterYear", { filterYear })
             .groupBy('genre.name')
             .getRawMany();
 
@@ -44,7 +47,7 @@ export class RatesStatsService {
             count: parseInt(item.count, 10),
         }));
 
-        // 3. Votos por mes y semana en 2025
+        // 3. Votos por mes y semana en el año especificado
         const votesByMonthRaw = await this.rateRepository
             .createQueryBuilder('rate')
             .select("TO_CHAR(rate.createdAt, 'Month')", 'month')
@@ -53,7 +56,7 @@ export class RatesStatsService {
             .addSelect('COUNT(rate.id)', 'count')
             .where('rate.userId = :userId', { userId })
             .andWhere('rate.rate IS NOT NULL')
-            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :year", { year: '2025' })
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :filterYear", { filterYear })
             .groupBy('month')
             .addGroupBy('month_num')
             .addGroupBy('week')
@@ -87,25 +90,27 @@ export class RatesStatsService {
 
         const formattedVotesByMonth = Array.from(votesByMonthMap.values());
 
-        // 4. Media y Mediana
+        // 4. Media y Mediana - filtered by year
         const stats = await this.rateRepository
             .createQueryBuilder('rate')
             .select('AVG(rate.rate)', 'mean')
             .addSelect('PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY rate.rate)', 'median')
             .where('rate.userId = :userId', { userId })
             .andWhere('rate.rate IS NOT NULL')
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :filterYear", { filterYear })
             .getRawOne();
 
         const mean = stats && stats.mean ? parseFloat(stats.mean).toFixed(2) : 0;
         const median = stats && stats.median ? parseFloat(stats.median) : 0;
 
-        // 5. Desglose de votos (0-10)
+        // 5. Desglose de votos (0-10) - filtered by year
         const votesByScoreRaw = await this.rateRepository
             .createQueryBuilder('rate')
             .select('rate.rate', 'score')
             .addSelect('COUNT(rate.id)', 'count')
             .where('rate.userId = :userId', { userId })
             .andWhere('rate.rate IS NOT NULL')
+            .andWhere("TO_CHAR(rate.createdAt, 'YYYY') = :filterYear", { filterYear })
             .groupBy('rate.rate')
             .orderBy('rate.rate', 'ASC')
             .getRawMany();

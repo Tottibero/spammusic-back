@@ -1,6 +1,8 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, OneToOne, ManyToOne } from 'typeorm';
+import { Content } from 'src/contents/entities/content.entity';
+import { User } from 'src/auth/entities/user.entity';
 
-export enum SpotifyEstado {
+export enum SpotifyStatus {
   ACTUALIZADA = 'actualizada',
   PUBLICADA = 'publicada',
   PARA_PUBLICAR = 'para_publicar',
@@ -8,7 +10,7 @@ export enum SpotifyEstado {
   EN_DESARROLLO = 'en_desarrollo',
 }
 
-export enum SpotifyTipo {
+export enum SpotifyType {
   FESTIVAL = 'festival',
   ESPECIAL = 'especial',
   GENERO = 'genero',
@@ -21,23 +23,29 @@ export class Spotify {
   id: string;
 
   @Column({ type: 'varchar', length: 200 })
-  nombre: string;
+  name: string;
 
-  @Column({ type: 'enum', enum: SpotifyEstado })
-  estado: SpotifyEstado;
+  @Column({ type: 'enum', enum: SpotifyStatus })
+  status: SpotifyStatus;
 
   @Column({ type: 'varchar', length: 500 })
-  enlace: string;
+  link: string;
 
-  @Column({ type: 'enum', enum: SpotifyTipo })
-  tipo: SpotifyTipo;
+  @Column({ type: 'enum', enum: SpotifyType })
+  type: SpotifyType;
 
   @Column({ type: 'timestamp with time zone', name: 'fecha_actualizacion' })
-  fechaActualizacion: Date;
+  updateDate: Date;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamp with time zone' })
   updatedAt: Date;
+
+  @OneToOne(() => Content, (content) => content.spotify)
+  content: Content;
+
+  @ManyToOne(() => User, (user) => user.spotify, { nullable: true })
+  user: User;
 }

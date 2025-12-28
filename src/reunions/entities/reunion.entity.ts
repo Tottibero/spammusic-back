@@ -15,11 +15,11 @@ export class Reunion {
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
-  @Column({ type: 'text', nullable: true })
-  description?: string;
-
   @Column({ type: 'timestamp' })
   date: Date;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 
   @OneToMany(() => Point, (point) => point.reunion, { cascade: true })
   points: Point[]; // Relación uno a muchos con la entidad Point

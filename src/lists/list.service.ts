@@ -270,13 +270,13 @@ export class ListsService {
     return lists;
   }
 
-  // Obtener listas de video actuales y futuras
+  // Obtener listas de video actuales y futuras (Mismá lógica que mensuales)
   async findCurrentVideoLists() {
     const today = new Date();
-    today.setDate(1); // Set to first day of current month (like monthly lists)
+    today.setDate(1);
     today.setHours(0, 0, 0, 0);
 
-    const lists = await this.listRepository.find({
+    return this.listRepository.find({
       where: {
         type: ListType.VIDEO,
         listDate: MoreThanOrEqual(today),
@@ -285,7 +285,6 @@ export class ListsService {
         listDate: 'ASC',
       },
     });
-    return lists;
   }
 
   // Obtener listas de video pasadas por año
@@ -294,7 +293,7 @@ export class ListsService {
     const endDate = new Date(year, 11, 31);
     endDate.setHours(23, 59, 59, 999);
 
-    const lists = await this.listRepository.find({
+    return this.listRepository.find({
       where: {
         type: ListType.VIDEO,
         listDate: Between(startDate, endDate),
@@ -303,7 +302,6 @@ export class ListsService {
         listDate: 'DESC',
       },
     });
-    return lists;
   }
 
   async createVideoList(date?: Date) {
@@ -312,11 +310,11 @@ export class ListsService {
     if (date) {
       targetDate = new Date(date);
     } else {
-      const now = new Date();
-      // Default to the first day of the next month
-      targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      targetDate = new Date(); // Use current date if none provided
     }
 
+    // Set to 1st of month to normalize if it represents a monthly video list
+    targetDate.setDate(1);
     targetDate.setHours(0, 0, 0, 0);
 
     const monthNames = [
@@ -324,12 +322,12 @@ export class ListsService {
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
-    const monthName = monthNames[targetDate.getMonth()];
-    const year = targetDate.getFullYear();
-
-    const name = `Video ${monthName} ${year}`;
+    const currentMonthName = monthNames[targetDate.getMonth()];
+    const name = `Videos ${currentMonthName}`; // Naming convention: Videos Enero, Videos Febrero...
 
     try {
+      // Check if exists first? Or rely on unique constraint? Lists usually don't have unique name constraint but might be good to check.
+      // But for now, just create.
       const list = this.listRepository.create({
         name,
         type: ListType.VIDEO,

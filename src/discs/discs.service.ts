@@ -8,7 +8,7 @@ import {
 import { CreateDiscDto } from './dto/create-discs.dto';
 import { UpdateDiscDto } from './dto/update-discs.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThanOrEqual, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Disc } from './entities/disc.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User } from 'src/auth/entities/user.entity';
@@ -22,7 +22,7 @@ export class DiscsService {
   constructor(
     @InjectRepository(Disc)
     private readonly discRepository: Repository<Disc>,
-  ) {}
+  ) { }
 
   async create(createDiscDto: CreateDiscDto) {
     try {
@@ -35,7 +35,8 @@ export class DiscsService {
   }
 
   async findAll(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange, genre, country, countryId, voted, votedType } = paginationDto;
+    const countryFilter = country || countryId;
     const userId = user.id;
 
     const today = new Date();
@@ -98,12 +99,25 @@ export class DiscsService {
     const totalItemsQueryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.artist', 'artist')
+      .where('disc.releaseDate <= :today', { today })
+      .leftJoin('artist.country', 'country')
       .leftJoin('disc.genre', 'genre')
-      .where('disc.releaseDate <= :today', { today });
+      .leftJoin('disc.rates', 'rate', 'rate.userId = :userId', { userId });
 
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    if (countryFilter) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(countryFilter);
+      if (isUUID) {
+        queryBuilder.andWhere('country.id = :countryFilter', { countryFilter });
+        totalItemsQueryBuilder.andWhere('country.id = :countryFilter', { countryFilter });
+      } else {
+        queryBuilder.andWhere('country.name = :countryFilter', { countryFilter });
+        totalItemsQueryBuilder.andWhere('country.name = :countryFilter', { countryFilter });
+      }
     }
 
     if (query) {
@@ -135,12 +149,54 @@ export class DiscsService {
       );
     }
 
+    if (voted === 'false' || (voted as any) === false) {
+      if (votedType === 'cover') {
+        queryBuilder.andWhere('rate.cover IS NULL');
+        totalItemsQueryBuilder.andWhere('rate.cover IS NULL');
+      } else {
+        queryBuilder.andWhere('rate.rate IS NULL');
+        totalItemsQueryBuilder.andWhere('rate.rate IS NULL');
+      }
+    } else if (voted === 'true' || (voted as any) === true) {
+      if (votedType === 'cover') {
+        queryBuilder.andWhere('rate.cover IS NOT NULL');
+        totalItemsQueryBuilder.andWhere('rate.cover IS NOT NULL');
+      } else {
+        queryBuilder.andWhere('rate.rate IS NOT NULL');
+        totalItemsQueryBuilder.andWhere('rate.rate IS NOT NULL');
+      }
+    }
+
+
+    if (paginationDto.orderBy) {
+      const sortParts = paginationDto.orderBy.split(',');
+      sortParts.forEach((part) => {
+        const [field, direction] = part.split(':');
+        if (field && direction) {
+          // Mapping known fields to safe query builder aliases
+          const validFields = {
+            'disc.releaseDate': 'disc.releaseDate',
+            'artist.name': 'artist.name',
+            'disc.createdAt': 'disc.createdAt',
+            'disc.name': 'disc.name',
+            // Add more allowed fields as needed
+          };
+
+          const dbField = validFields[field];
+          if (dbField) {
+            queryBuilder.addOrderBy(dbField, direction.toUpperCase() as 'ASC' | 'DESC');
+          }
+        }
+      });
+    } else {
+      queryBuilder
+        .orderBy('disc.releaseDate', 'DESC')
+        .addOrderBy('artist.name', 'ASC');
+    }
+
     queryBuilder
       .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordena por fecha de lanzamiento (descendente)
-      .addOrderBy('artist.name', 'ASC'); // Luego ordena por nombre del artista (ascendente)
-
+      .skip(offset);
     const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
 
     // Mapea los valores crudos de averageRate, averageCover y commentCount a las entidades
@@ -149,8 +205,8 @@ export class DiscsService {
       artist: {
         ...disc.artist,
         country: {
-            ...disc.artist.country,
-            name: disc.artist?.country?.name || null
+          ...disc.artist.country,
+          name: disc.artist?.country?.name || null
         },
       },
       userRate: disc.rates.length > 0 ? disc.rates[0] : null,
@@ -249,7 +305,7 @@ export class DiscsService {
         ...disc,
         artist: {
           ...disc.artist,
-          country: { 
+          country: {
             ...disc.artist.country,
             name: disc.artist?.country?.name || null
           },
@@ -332,7 +388,7 @@ export class DiscsService {
 
   async findTopRatedOrFeaturedAndStats(
     paginationDto: PaginationDto,
-    user: User, 
+    user: User,
     genreId?: string
   ): Promise<{
     discs: Disc[];
@@ -349,11 +405,13 @@ export class DiscsService {
     ratingDistribution: { rate: number; count: number }[];
   }> {
     const userId = user.id;
-    const { dateRange } = paginationDto;
+    const { dateRange, country, countryId } = paginationDto as any;
+    const countryFilter = country || countryId;
 
     // Parámetros y condición para la consulta principal (incluye userId)
     let dateCondition = '';
     let genreCondition = '';
+    let countryCondition = '';
     const params: any[] = [userId]; // $1 será userId
     let paramCounter = 1;
 
@@ -372,10 +430,23 @@ export class DiscsService {
       paramCounter += 1;
     }
 
+    if (countryFilter) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(countryFilter);
+      countryCondition = (dateCondition || genreCondition) ? ' AND' : ' WHERE';
+      if (isUUID) {
+        countryCondition += ` c.id = $${paramCounter + 1}`;
+      } else {
+        countryCondition += ` c.name = $${paramCounter + 1}`;
+      }
+      params.push(countryFilter);
+      paramCounter += 1;
+    }
+
     // --- Cálculo de estadísticas globales con filtro de fecha ---
     // Para la consulta global no necesitamos el userId, así que definimos sus propios parámetros
     let dateConditionGlobal = '';
     let genreConditionGlobal = '';
+    let countryConditionGlobal = '';
     const globalStatsParams: any[] = [];
     let globalParamCounter = 0;
 
@@ -391,6 +462,18 @@ export class DiscsService {
       genreConditionGlobal = dateConditionGlobal ? ' AND' : ' WHERE';
       genreConditionGlobal += ` d."genreId" = $${globalParamCounter + 1}`;
       globalStatsParams.push(genreId);
+      globalParamCounter += 1;
+    }
+
+    if (countryFilter) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(countryFilter);
+      countryConditionGlobal = (dateConditionGlobal || genreConditionGlobal) ? ' AND' : ' WHERE';
+      if (isUUID) {
+        countryConditionGlobal += ` c.id = $${globalParamCounter + 1}`;
+      } else {
+        countryConditionGlobal += ` c.name = $${globalParamCounter + 1}`;
+      }
+      globalStatsParams.push(countryFilter);
     }
 
     const globalStatsQuery = `
@@ -404,8 +487,11 @@ export class DiscsService {
           COALESCE(AVG(r.rate), 0) AS avgRates
         FROM disc d
         LEFT JOIN rate r ON d.id = r."discId"
+        LEFT JOIN artist a ON d."artistId" = a.id
+        LEFT JOIN country c ON a."countryId" = c.id
         ${dateConditionGlobal}
         ${genreConditionGlobal}
+        ${countryConditionGlobal}
         GROUP BY d.id
       ) AS rate_stats;
     `;
@@ -450,6 +536,7 @@ export class DiscsService {
       LEFT JOIN pending p ON p."discId" = d.id AND p."userId" = $1
       ${dateCondition}
       ${genreCondition}
+      ${countryCondition}
       GROUP BY d.id, a.name, g.name, g.color, f.id, c.id, c.name, c."isoCode"
       ORDER BY "weightedScore" DESC
       LIMIT 20;
@@ -512,9 +599,9 @@ export class DiscsService {
     // --- Transformación de los datos para el formato esperado ---
     const processedDiscs = topRatedDiscs.map((disc: any) => ({
       ...disc,
-      artist: { 
-        name: disc.artistName, 
-        country: { 
+      artist: {
+        name: disc.artistName,
+        country: {
           id: disc.countryId,
           name: disc.countryName || null,
           isoCode: disc.countryIsoCode || null
@@ -523,10 +610,10 @@ export class DiscsService {
       genre: { name: disc.genreName, color: disc.genreColor },
       userRate: disc.userRateId
         ? {
-            id: disc.userRateId,
-            rate: parseFloat(disc.userRate) || null,
-            cover: parseFloat(disc.userCover) || null,
-          }
+          id: disc.userRateId,
+          rate: parseFloat(disc.userRate) || null,
+          cover: parseFloat(disc.userCover) || null,
+        }
         : null,
       favoriteId: disc.userFavoriteId || null,
       pendingId: disc.pendingId || null,

@@ -48,6 +48,8 @@ export class List {
   @Column({ type: 'date', nullable: true })
   closeDate?: Date;
 
+
+
   @OneToMany(() => Asignation, (asignation) => asignation.list, {
     cascade: true,
     eager: true,

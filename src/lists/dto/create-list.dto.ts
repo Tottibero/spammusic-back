@@ -16,8 +16,9 @@ export class CreateListDto {
   @IsEnum(ListType)
   type: ListType;
 
+  @IsOptional()
   @IsEnum(ListStatus)
-  status: ListStatus;
+  status?: ListStatus;
 
   @IsBoolean()
   @IsOptional()
@@ -34,4 +35,6 @@ export class CreateListDto {
   @IsOptional()
   @IsDateString()
   closeDate?: string | null;
+
+
 }

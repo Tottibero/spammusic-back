@@ -26,7 +26,7 @@ export class FavoritesService {
   constructor(
     @InjectRepository(Favorite)
     private readonly favoriteRepository: Repository<Favorite>,
-  ) {}
+  ) { }
 
   async create(createFavoriteDto: CreateFavoriteDto, user: User) {
     try {
@@ -53,7 +53,7 @@ export class FavoritesService {
   }
 
   async findAllByUser(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange, genre } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange, genre, country } = paginationDto;
     const userId = user.id;
 
     // Manejo del rango de fechas
@@ -139,6 +139,15 @@ export class FavoritesService {
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
     }
+
+    if (country) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(country);
+      if (isUUID) {
+        queryBuilder.andWhere('country.id = :country', { country });
+      } else {
+        queryBuilder.andWhere('country.name = :country', { country });
+      }
+    }
     const ALLOWED_ORDER_FIELDS = new Set<string>([
       // columnas reales/relaciones
       'disc.releaseDate',
@@ -185,10 +194,10 @@ export class FavoritesService {
         commentCount: parseInt(raw[index].commentCount, 10) || 0,
         userRate: raw[index].rateId
           ? {
-              id: raw[index].rateId,
-              rate: raw[index].userRate,
-              cover: raw[index].userCover,
-            }
+            id: raw[index].rateId,
+            rate: raw[index].userRate,
+            cover: raw[index].userCover,
+          }
           : null,
         userPending: raw[index].pendingId ? { id: raw[index].pendingId } : null,
         averageRate: parseFloat(raw[index].averageRate) || null,
@@ -201,6 +210,7 @@ export class FavoritesService {
       .createQueryBuilder('favorite')
       .leftJoin('favorite.disc', 'disc')
       .leftJoin('disc.artist', 'artist')
+      .leftJoin('artist.country', 'country')
       .leftJoin('disc.genre', 'genre')
       .leftJoin(
         'rate',
@@ -235,6 +245,15 @@ export class FavoritesService {
 
     if (genre) {
       totalItemsQueryBuilder.andWhere('disc.genreId = :genre', { genre });
+    }
+
+    if (country) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(country);
+      if (isUUID) {
+        totalItemsQueryBuilder.andWhere('country.id = :country', { country });
+      } else {
+        totalItemsQueryBuilder.andWhere('country.name = :country', { country });
+      }
     }
 
     const totalItems = await totalItemsQueryBuilder.getCount();
