@@ -35,7 +35,13 @@ export class PaginationDto {
   type?: string; // Permitir el parámetro `query` como opcional
 
   @IsOptional()
-  voted?: boolean; // Permitir el parámetro `query` como opcional
+  @IsOptional()
+  @IsString()
+  voted?: string;
+
+  @IsOptional()
+  @IsString()
+  votedType?: string; // rate | cover | both
 
   @IsOptional()
   @IsArray()
