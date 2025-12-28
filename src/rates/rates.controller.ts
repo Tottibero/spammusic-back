@@ -31,8 +31,8 @@ export class RatesController {
 
   @Get('stats')
   @Auth()
-  getUserStats(@GetUser() user: User) {
-    return this.ratesStatsService.getUserStats(user);
+  getUserStats(@GetUser() user: User, @Query('year') year?: string) {
+    return this.ratesStatsService.getUserStats(user, year);
   }
 
   // Esta estaba abajo y fallaba porque chocaba con :id

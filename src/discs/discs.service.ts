@@ -35,11 +35,11 @@ export class DiscsService {
   }
 
   async findAll(paginationDto: PaginationDto, user: User) {
-    const { limit = 10, offset = 0, query, dateRange, genre, country, countryId } = paginationDto;
+    const { limit = 10, offset = 0, query, dateRange, genre, country, countryId, voted, votedType } = paginationDto;
     const countryFilter = country || countryId;
     const userId = user.id;
 
-
+    const today = new Date();
 
     // Calcula el rango de fechas si se especifica el mes
     let startDate: Date | undefined;
@@ -86,19 +86,23 @@ export class DiscsService {
           .from('rate', 'rate')
           .where('rate.discId = disc.id AND rate.rate IS NOT NULL');
       }, 'rateCount')
+      .where('disc.releaseDate <= :today', { today })
       // Agrega el conteo de comentarios para cada disco
       .addSelect((subQuery) => {
         return subQuery
           .select('COUNT(comment.id)', 'commentCount')
           .from('comment', 'comment')
           .where('comment.discId = disc.id');
-      }, 'commentCount');
+      }, 'commentCount')
+      .where('disc.releaseDate <= :today', { today });
 
     const totalItemsQueryBuilder = this.discRepository
       .createQueryBuilder('disc')
       .leftJoin('disc.artist', 'artist')
+      .where('disc.releaseDate <= :today', { today })
       .leftJoin('artist.country', 'country')
-      .leftJoin('disc.genre', 'genre');
+      .leftJoin('disc.genre', 'genre')
+      .leftJoin('disc.rates', 'rate', 'rate.userId = :userId', { userId });
 
     if (genre) {
       queryBuilder.andWhere('disc.genreId = :genre', { genre });
@@ -145,12 +149,54 @@ export class DiscsService {
       );
     }
 
+    if (voted === 'false' || (voted as any) === false) {
+      if (votedType === 'cover') {
+        queryBuilder.andWhere('rate.cover IS NULL');
+        totalItemsQueryBuilder.andWhere('rate.cover IS NULL');
+      } else {
+        queryBuilder.andWhere('rate.rate IS NULL');
+        totalItemsQueryBuilder.andWhere('rate.rate IS NULL');
+      }
+    } else if (voted === 'true' || (voted as any) === true) {
+      if (votedType === 'cover') {
+        queryBuilder.andWhere('rate.cover IS NOT NULL');
+        totalItemsQueryBuilder.andWhere('rate.cover IS NOT NULL');
+      } else {
+        queryBuilder.andWhere('rate.rate IS NOT NULL');
+        totalItemsQueryBuilder.andWhere('rate.rate IS NOT NULL');
+      }
+    }
+
+
+    if (paginationDto.orderBy) {
+      const sortParts = paginationDto.orderBy.split(',');
+      sortParts.forEach((part) => {
+        const [field, direction] = part.split(':');
+        if (field && direction) {
+          // Mapping known fields to safe query builder aliases
+          const validFields = {
+            'disc.releaseDate': 'disc.releaseDate',
+            'artist.name': 'artist.name',
+            'disc.createdAt': 'disc.createdAt',
+            'disc.name': 'disc.name',
+            // Add more allowed fields as needed
+          };
+
+          const dbField = validFields[field];
+          if (dbField) {
+            queryBuilder.addOrderBy(dbField, direction.toUpperCase() as 'ASC' | 'DESC');
+          }
+        }
+      });
+    } else {
+      queryBuilder
+        .orderBy('disc.releaseDate', 'DESC')
+        .addOrderBy('artist.name', 'ASC');
+    }
+
     queryBuilder
       .take(limit)
-      .skip(offset)
-      .orderBy('disc.releaseDate', 'DESC') // Ordena por fecha de lanzamiento (descendente)
-      .addOrderBy('artist.name', 'ASC'); // Luego ordena por nombre del artista (ascendente)
-
+      .skip(offset);
     const { entities: discs, raw } = await queryBuilder.getRawAndEntities();
 
     // Mapea los valores crudos de averageRate, averageCover y commentCount a las entidades
