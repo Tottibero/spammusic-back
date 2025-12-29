@@ -45,6 +45,9 @@ export class Content {
     @Column({ type: 'date', nullable: true })
     closeDate?: Date;
 
+    @Column({ type: 'date', nullable: true })
+    listDate?: Date;
+
     @ManyToOne(() => User, { eager: true })
     author: User;
 

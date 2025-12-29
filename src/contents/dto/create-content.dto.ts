@@ -30,6 +30,10 @@ export class CreateContentDto {
     @IsOptional()
     closeDate?: string;
 
+    @IsDateString()
+    @IsOptional()
+    listDate?: string;
+
     @IsUUID()
     authorId: string;
 
