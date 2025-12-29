@@ -119,7 +119,7 @@ export class ListsService {
       await this.listRepository.save(list);
 
       // Update associated Content if sync required
-      if (updateListDto.closeDate || updateListDto.releaseDate) {
+      if (updateListDto.closeDate || updateListDto.releaseDate || updateListDto.listDate) {
         const content = await this.contentRepository.findOne({ where: { list: { id: list.id } } });
 
         if (content) {
@@ -142,6 +142,18 @@ export class ListsService {
             if (!contentDate || contentDate.getTime() !== releaseDate.getTime()) {
               content.publicationDate = releaseDate;
               changed = true;
+            }
+          }
+
+          // Sync list.listDate -> content.listDate (for RADAR, BEST, and VIDEO)
+          if (list.type === 'week' || list.type === 'month' || list.type === 'video') { // week = RADAR, month = BEST, video = VIDEO
+            if (list.listDate) {
+              const listListDate = new Date(list.listDate);
+              const contentListDate = content.listDate ? new Date(content.listDate) : null;
+              if (!contentListDate || contentListDate.getTime() !== listListDate.getTime()) {
+                content.listDate = listListDate;
+                changed = true;
+              }
             }
           }
 
