@@ -268,13 +268,12 @@ export class ContentsService {
       if (contentWithList && contentWithList.list) {
         let listChanged = false;
 
-        // Sync publicationDate -> listDate
+        // Sync publicationDate -> releaseDate (NOT listDate - listDate is independent)
         if (contentWithList.publicationDate) {
           const contentDate = new Date(contentWithList.publicationDate);
-          const listDate = contentWithList.list.listDate ? new Date(contentWithList.list.listDate) : null;
+          const releaseDate = contentWithList.list.releaseDate ? new Date(contentWithList.list.releaseDate) : null;
 
-          if (!listDate || listDate.getTime() !== contentDate.getTime()) {
-            contentWithList.list.listDate = contentDate;
+          if (!releaseDate || releaseDate.getTime() !== contentDate.getTime()) {
             contentWithList.list.releaseDate = contentDate;
             listChanged = true;
           }

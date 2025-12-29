@@ -119,11 +119,13 @@ export class ListsService {
       await this.listRepository.save(list);
 
       // Update associated Content if sync required
-      if (updateListDto.closeDate || updateListDto.releaseDate || updateListDto.listDate) {
+      if (updateListDto.closeDate || updateListDto.releaseDate) {
         const content = await this.contentRepository.findOne({ where: { list: { id: list.id } } });
 
         if (content) {
           let changed = false;
+
+          // Sync closeDate
           if (list.closeDate) {
             const listCloseDate = new Date(list.closeDate);
             const contentCloseDate = content.closeDate ? new Date(content.closeDate) : null;
@@ -133,12 +135,12 @@ export class ListsService {
             }
           }
 
-          // Sync publicationDate with listDate
-          if (list.listDate) {
-            const listDate = new Date(list.listDate);
+          // Sync publicationDate with releaseDate (NOT listDate)
+          if (list.releaseDate) {
+            const releaseDate = new Date(list.releaseDate);
             const contentDate = content.publicationDate ? new Date(content.publicationDate) : null;
-            if (!contentDate || contentDate.getTime() !== listDate.getTime()) {
-              content.publicationDate = listDate;
+            if (!contentDate || contentDate.getTime() !== releaseDate.getTime()) {
+              content.publicationDate = releaseDate;
               changed = true;
             }
           }
