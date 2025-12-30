@@ -164,22 +164,15 @@ export class ContentsService {
 
     // Auto-create Weekly List if type is RADAR or BEST
     if (savedContent.type === ContentType.RADAR) {
-      const list = await this.listsService.createWeeklyList(savedContent.publicationDate);
+      const list = await this.listsService.createWeeklyList(savedContent.publicationDate, savedContent.listDate);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     } else if (savedContent.type === ContentType.BEST) {
-      const list = await this.listsService.createMonthlyList(savedContent.publicationDate);
+      const list = await this.listsService.createMonthlyList(savedContent.publicationDate, savedContent.listDate);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     } else if (savedContent.type === ContentType.VIDEO) {
-      const list = await this.listsService.createVideoList(savedContent.publicationDate);
-      savedContent.list = list;
-      await this.contentRepo.save(savedContent);
-    }
-
-    // Auto-create Video List if type is VIDEO
-    if (savedContent.type === ContentType.VIDEO) {
-      const list = await this.listsService.createVideoList(savedContent.publicationDate);
+      const list = await this.listsService.createVideoList(savedContent.publicationDate, savedContent.listDate, savedContent.name);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     }
