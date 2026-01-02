@@ -407,6 +407,7 @@ export class DiscsService {
     const userId = user.id;
     const { dateRange, country, countryId, statsDateRange, distributionDateRange } = paginationDto as any;
     const countryFilter = country || countryId;
+    const today = new Date();
 
     // Parámetros y condición para la consulta principal (incluye userId)
     let dateCondition = '';
@@ -417,10 +418,15 @@ export class DiscsService {
 
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateCondition = `WHERE d."releaseDate" BETWEEN $${paramCounter + 1} AND $${paramCounter + 2}`;
+      dateCondition = `WHERE d."releaseDate" BETWEEN $${paramCounter + 1} AND $${paramCounter + 2} AND d."releaseDate" <= $${paramCounter + 3}`;
       params.push(new Date(startDate));
       params.push(new Date(endDate));
-      paramCounter += 2;
+      params.push(today);
+      paramCounter += 3;
+    } else {
+      dateCondition = `WHERE d."releaseDate" <= $${paramCounter + 1}`;
+      params.push(today);
+      paramCounter += 1;
     }
 
     if (genreId) {
@@ -452,10 +458,15 @@ export class DiscsService {
 
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $${globalParamCounter + 1} AND $${globalParamCounter + 2}`;
+      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $${globalParamCounter + 1} AND $${globalParamCounter + 2} AND d."releaseDate" <= $${globalParamCounter + 3}`;
       globalStatsParams.push(new Date(startDate));
       globalStatsParams.push(new Date(endDate));
-      globalParamCounter += 2;
+      globalStatsParams.push(today);
+      globalParamCounter += 3;
+    } else {
+      dateConditionGlobal = `WHERE d."releaseDate" <= $${globalParamCounter + 1}`;
+      globalStatsParams.push(today);
+      globalParamCounter += 1;
     }
 
     if (genreId) {
