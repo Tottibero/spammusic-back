@@ -5,16 +5,120 @@ import { Repository } from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { ContentsService } from './contents.service';
 import { ContentType } from './entities/content.entity';
+import { Disc } from 'src/discs/entities/disc.entity';
+import * as cheerio from 'cheerio';
 
 @Injectable()
 export class ContentSchedulerService {
     private readonly logger = new Logger(ContentSchedulerService.name);
 
+    private accessToken: string;
+    private tokenExpiration: Date;
+
     constructor(
         @InjectRepository(User)
         private readonly userRepo: Repository<User>,
         private readonly contentsService: ContentsService,
+        @InjectRepository(Disc)
+        private readonly discRepo: Repository<Disc>,
     ) { }
+
+
+    // Ejecuta todos los días a las 6:00 AM
+    @Cron('0 6 * * *', {
+        timeZone: 'Europe/Madrid',
+    })
+    async checkMissingSpotifyLinks() {
+        this.logger.log('Starting daily check for missing Spotify links...');
+        const today = new Date();
+
+        try {
+            // Find discs with missing links or errors that are already released
+            const discsToUpdate = await this.discRepo.createQueryBuilder('disc')
+                .leftJoinAndSelect('disc.artist', 'artist')
+                .leftJoinAndSelect('disc.genre', 'genre')
+                .where('disc.releaseDate < :today', { today })
+                .andWhere('(disc.link IS NULL OR disc.link = :empty OR disc.link = :notFound OR disc.link = :error)', {
+                    empty: '',
+                    notFound: 'No se encontró el álbum',
+                    error: 'Error al realizar la búsqueda'
+                })
+                .getMany();
+
+            this.logger.log(`Found ${discsToUpdate.length} discs to check for Spotify links.`);
+
+            if (discsToUpdate.length === 0) {
+                this.logger.log('Found 0 discs to check. Daily check finished.');
+                return;
+            }
+
+            const token = await this.getSpotifyToken();
+            if (!token) {
+                this.logger.error('Could not get Spotify token. Daily check finished.');
+                return;
+            }
+
+            let updatedCount = 0;
+
+            for (const disc of discsToUpdate) {
+                try {
+                    const query = encodeURIComponent(`album:${disc.name} artist:${disc.artist.name}`);
+                    const response = await fetch(
+                        `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (data.albums?.items?.length > 0) {
+                        const album = data.albums.items[0];
+                        disc.link = album.external_urls.spotify;
+                        disc.image = album.images?.[0]?.url || null;
+                        disc.verified = true;
+
+                        await this.discRepo.save(disc);
+                        updatedCount++;
+                        this.logger.log(`Updated Spotify link for: ${disc.name} - ${disc.artist.name}`);
+                    } else {
+                        this.logger.log(`Album not found on Spotify. Trying Bandcamp for: ${disc.name} - ${disc.artist.name}`);
+
+                        // Fallback to Bandcamp
+                        const bandcampResult = await this.searchBandcamp(disc.artist.name, disc.name);
+
+                        if (bandcampResult) {
+                            disc.link = bandcampResult.link;
+                            disc.image = bandcampResult.image || disc.image; // Keep existing image if bandcamp doesn't have one? Or prefer bandcamp?
+                            disc.verified = true;
+
+                            await this.discRepo.save(disc);
+                            updatedCount++;
+                            this.logger.log(`Updated Bandcamp link for: ${disc.name} - ${disc.artist.name}`);
+                        } else {
+                            if (disc.link !== 'No se encontró el álbum') {
+                                disc.link = 'No se encontró el álbum';
+                                await this.discRepo.save(disc);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    this.logger.error(`Error searching album ${disc.name}`, error);
+                    if (disc.link !== 'Error al realizar la búsqueda') {
+                        disc.link = 'Error al realizar la búsqueda';
+                        await this.discRepo.save(disc);
+                    }
+                }
+            }
+
+            this.logger.log(`Daily check completed. Updated links for ${updatedCount} discs.`);
+
+        } catch (error) {
+            this.logger.error('Error checking missing Spotify links', error);
+        }
+    }
 
     // Ejecuta cada lunes a las 8:00 AM
     @Cron('0 8 * * 1', {
@@ -28,6 +132,7 @@ export class ContentSchedulerService {
 
         if (!author) {
             this.logger.error('No user found to assign as author for scheduled content');
+            this.logger.log('Weekly content creation job finished with error.');
             return;
         }
 
@@ -88,6 +193,87 @@ export class ContentSchedulerService {
             this.logger.log(`Weekly radar content created successfully`);
         } catch (error) {
             this.logger.error(`Error creating weekly radar content: ${error.message}`, error.stack);
+        }
+
+        this.logger.log('Weekly content creation job finished.');
+    }
+
+    private async searchBandcamp(artist: string, album: string): Promise<{ link: string, image: string | null } | null> {
+        try {
+            const query = encodeURIComponent(`${artist} ${album}`);
+            const response = await fetch(`https://bandcamp.com/search?q=${query}`);
+
+            if (!response.ok) {
+                this.logger.warn(`Bandcamp search failed: ${response.statusText}`);
+                return null;
+            }
+
+            const html = await response.text();
+            const $ = cheerio.load(html);
+
+            // Find the first album result
+            const firstResult = $('.searchresult.album').first();
+
+            if (firstResult.length > 0) {
+                const link = firstResult.find('.itemurl').text().trim(); // itemurl class usually contains the cleanup url text, but usually href is better
+
+                const linkElement = firstResult.find('a').first();
+                let linkUrl = linkElement.attr('href');
+
+                // Clean up link parameter if it has ?q=... (sometimes search result redirects might act funny, but usually direct links)
+                if (linkUrl) {
+                    // Get image
+                    const imgElement = firstResult.find('img').first();
+                    const image = imgElement.attr('src') || null;
+
+                    // Sometimes bandcamp returns a clean URL like https://artist.bandcamp.com/album/name
+                    // But sometimes it might have query params.
+                    return { link: linkUrl.split('?')[0], image };
+                }
+            }
+
+            return null;
+        } catch (error) {
+            this.logger.error(`Error searching Bandcamp for ${artist} - ${album}`, error);
+            return null;
+        }
+    }
+
+
+    private async getSpotifyToken(): Promise<string | null> {
+        if (this.accessToken && this.tokenExpiration && this.tokenExpiration > new Date()) {
+            return this.accessToken;
+        }
+
+        const clientId = process.env.SPOTIFY_CLIENT_ID;
+        const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+            this.logger.error('Spotify credentials not found');
+            return null;
+        }
+
+        try {
+            const response = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+                },
+                body: 'grant_type=client_credentials',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch token: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            this.accessToken = data.access_token;
+            this.tokenExpiration = new Date(Date.now() + (data.expires_in - 60) * 1000);
+            return this.accessToken;
+        } catch (error) {
+            this.logger.error('Error getting Spotify token', error);
+            return null;
         }
     }
 }
