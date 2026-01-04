@@ -42,6 +42,18 @@ async function bootstrap() {
             winston.format.json(),
           ),
         }),
+        new winston.transports.Http({
+          host: 'logs.collector.eu-01.cloud.solarwinds.com',
+          path: '/v1/logs',
+          ssl: true,
+          headers: {
+            Authorization: `Bearer fDK3DNFpJspyevqaNj8qev2rBzAML9Ha6eHt8G5tKbOZ8IQ5TM6RKNk4H_gy36q3lHXSct0`,
+          },
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
       ],
     }),
   });
