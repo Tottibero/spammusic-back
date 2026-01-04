@@ -124,6 +124,8 @@ export class ListsService {
 
         if (content) {
           let changed = false;
+
+          // Sync closeDate
           if (list.closeDate) {
             const listCloseDate = new Date(list.closeDate);
             const contentCloseDate = content.closeDate ? new Date(content.closeDate) : null;
@@ -133,13 +135,25 @@ export class ListsService {
             }
           }
 
-          // Sync publicationDate with listDate
-          if (list.listDate) {
-            const listDate = new Date(list.listDate);
+          // Sync publicationDate with releaseDate (NOT listDate)
+          if (list.releaseDate) {
+            const releaseDate = new Date(list.releaseDate);
             const contentDate = content.publicationDate ? new Date(content.publicationDate) : null;
-            if (!contentDate || contentDate.getTime() !== listDate.getTime()) {
-              content.publicationDate = listDate;
+            if (!contentDate || contentDate.getTime() !== releaseDate.getTime()) {
+              content.publicationDate = releaseDate;
               changed = true;
+            }
+          }
+
+          // Sync list.listDate -> content.listDate (for RADAR, BEST, and VIDEO)
+          if (list.type === 'week' || list.type === 'month' || list.type === 'video') { // week = RADAR, month = BEST, video = VIDEO
+            if (list.listDate) {
+              const listListDate = new Date(list.listDate);
+              const contentListDate = content.listDate ? new Date(content.listDate) : null;
+              if (!contentListDate || contentListDate.getTime() !== listListDate.getTime()) {
+                content.listDate = listListDate;
+                changed = true;
+              }
             }
           }
 
@@ -304,26 +318,37 @@ export class ListsService {
     });
   }
 
-  async createVideoList(date?: Date) {
-    let targetDate: Date;
+  async createVideoList(releaseDate?: Date, listDate?: Date, listName?: string) {
+    let targetReleaseDate: Date;
 
-    if (date) {
-      targetDate = new Date(date);
+    if (releaseDate) {
+      targetReleaseDate = new Date(releaseDate);
     } else {
-      targetDate = new Date(); // Use current date if none provided
+      targetReleaseDate = new Date(); // Use current date if none provided
     }
 
     // Set to 1st of month to normalize if it represents a monthly video list
-    targetDate.setDate(1);
-    targetDate.setHours(0, 0, 0, 0);
+    targetReleaseDate.setDate(1);
+    targetReleaseDate.setHours(0, 0, 0, 0);
+
+    // Determine targetListDate
+    let targetListDate: Date;
+    if (listDate) {
+      targetListDate = new Date(listDate);
+    } else {
+      targetListDate = new Date(targetReleaseDate);
+    }
+    // Also normalize to 1st of month for video lists? Assuming yes based on logic.
+    targetListDate.setDate(1);
+    targetListDate.setHours(0, 0, 0, 0);
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
-    const currentMonthName = monthNames[targetDate.getMonth()];
-    const name = `Videos ${currentMonthName}`; // Naming convention: Videos Enero, Videos Febrero...
+    const currentMonthName = monthNames[targetListDate.getMonth()];
+    const name = listName || `Videos ${currentMonthName}`; // Use provided name or default naming convention
 
     try {
       // Check if exists first? Or rely on unique constraint? Lists usually don't have unique name constraint but might be good to check.
@@ -332,8 +357,8 @@ export class ListsService {
         name,
         type: ListType.VIDEO,
         status: ListStatus.NEW,
-        listDate: targetDate,
-        releaseDate: targetDate,
+        listDate: targetListDate,
+        releaseDate: targetReleaseDate,
       });
 
       await this.listRepository.save(list);
@@ -344,30 +369,41 @@ export class ListsService {
     }
   }
 
-  async createWeeklyList(date?: Date) {
-    let targetDate: Date;
+  async createWeeklyList(releaseDate?: Date, listDate?: Date) {
+    let targetReleaseDate: Date;
 
-    if (date) {
-      targetDate = new Date(date);
+    if (releaseDate) {
+      targetReleaseDate = new Date(releaseDate);
     } else {
       const now = new Date();
       // Calcular el próximo lunes
       const currentDay = now.getDay();
       const daysUntilMonday = currentDay === 0 ? 1 : (8 - currentDay) % 7 || 7;
 
-      targetDate = new Date(now);
-      targetDate.setDate(now.getDate() + daysUntilMonday);
+      targetReleaseDate = new Date(now);
+      targetReleaseDate.setDate(now.getDate() + daysUntilMonday);
     }
 
-    targetDate.setHours(0, 0, 0, 0);
+    targetReleaseDate.setHours(0, 0, 0, 0);
+
+    // Determine targetListDate (for naming and listDate field)
+    let targetListDate: Date;
+    if (listDate) {
+      targetListDate = new Date(listDate);
+    } else {
+      targetListDate = new Date(targetReleaseDate);
+    }
+    targetListDate.setHours(0, 0, 0, 0);
+
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
-    const currentMonthName = monthNames[targetDate.getMonth()];
-    const weekOfMonth = Math.ceil(targetDate.getDate() / 7);
+    // Use targetListDate for naming
+    const currentMonthName = monthNames[targetListDate.getMonth()];
+    const weekOfMonth = Math.ceil(targetListDate.getDate() / 7);
 
     const name = `Discos ${currentMonthName} Semana ${weekOfMonth}`;
 
@@ -376,8 +412,8 @@ export class ListsService {
         name,
         type: ListType.WEEK,
         status: ListStatus.NEW,
-        listDate: targetDate,
-        releaseDate: targetDate,
+        listDate: targetListDate,
+        releaseDate: targetReleaseDate,
       });
 
       await this.listRepository.save(list);
@@ -388,26 +424,36 @@ export class ListsService {
     }
   }
 
-  async createMonthlyList(date?: Date) {
-    let targetDate: Date;
+  async createMonthlyList(releaseDate?: Date, listDate?: Date) {
+    let targetReleaseDate: Date;
 
-    if (date) {
-      targetDate = new Date(date);
+    if (releaseDate) {
+      targetReleaseDate = new Date(releaseDate);
     } else {
       const now = new Date();
       // Default to the first day of the next month
-      targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      targetReleaseDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     }
 
-    targetDate.setHours(0, 0, 0, 0);
+    targetReleaseDate.setHours(0, 0, 0, 0);
+
+    // Determine targetListDate
+    let targetListDate: Date;
+    if (listDate) {
+      targetListDate = new Date(listDate);
+    } else {
+      targetListDate = new Date(targetReleaseDate);
+    }
+    targetListDate.setHours(0, 0, 0, 0);
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
-    const monthName = monthNames[targetDate.getMonth()];
-    const year = targetDate.getFullYear();
+    // Use targetListDate for naming
+    const monthName = monthNames[targetListDate.getMonth()];
+    const year = targetListDate.getFullYear();
 
     const name = `Discos ${monthName} ${year}`;
 
@@ -416,8 +462,8 @@ export class ListsService {
         name,
         type: ListType.MONTH,
         status: ListStatus.NEW,
-        listDate: targetDate,
-        releaseDate: targetDate,
+        listDate: targetListDate,
+        releaseDate: targetReleaseDate,
       });
 
       await this.listRepository.save(list);

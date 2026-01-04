@@ -72,4 +72,28 @@ export class PaginationDto {
   @IsOptional()
   @IsString()
   orderBy?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(2)
+  @IsDate({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map((v) => new Date(v));
+    }
+    return value;
+  })
+  statsDateRange?: [Date, Date];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(2)
+  @IsDate({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map((v) => new Date(v));
+    }
+    return value;
+  })
+  distributionDateRange?: [Date, Date];
 }

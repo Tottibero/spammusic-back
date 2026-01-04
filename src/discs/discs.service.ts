@@ -405,8 +405,9 @@ export class DiscsService {
     ratingDistribution: { rate: number; count: number }[];
   }> {
     const userId = user.id;
-    const { dateRange, country, countryId } = paginationDto as any;
+    const { dateRange, country, countryId, statsDateRange, distributionDateRange } = paginationDto as any;
     const countryFilter = country || countryId;
+    const today = new Date();
 
     // Parámetros y condición para la consulta principal (incluye userId)
     let dateCondition = '';
@@ -417,10 +418,15 @@ export class DiscsService {
 
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateCondition = `WHERE d."releaseDate" BETWEEN $${paramCounter + 1} AND $${paramCounter + 2}`;
+      dateCondition = `WHERE d."releaseDate" BETWEEN $${paramCounter + 1} AND $${paramCounter + 2} AND d."releaseDate" <= $${paramCounter + 3}`;
       params.push(new Date(startDate));
       params.push(new Date(endDate));
-      paramCounter += 2;
+      params.push(today);
+      paramCounter += 3;
+    } else {
+      dateCondition = `WHERE d."releaseDate" <= $${paramCounter + 1}`;
+      params.push(today);
+      paramCounter += 1;
     }
 
     if (genreId) {
@@ -452,10 +458,15 @@ export class DiscsService {
 
     if (dateRange && dateRange.length === 2) {
       const [startDate, endDate] = dateRange;
-      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $${globalParamCounter + 1} AND $${globalParamCounter + 2}`;
+      dateConditionGlobal = `WHERE d."releaseDate" BETWEEN $${globalParamCounter + 1} AND $${globalParamCounter + 2} AND d."releaseDate" <= $${globalParamCounter + 3}`;
       globalStatsParams.push(new Date(startDate));
       globalStatsParams.push(new Date(endDate));
-      globalParamCounter += 2;
+      globalStatsParams.push(today);
+      globalParamCounter += 3;
+    } else {
+      dateConditionGlobal = `WHERE d."releaseDate" <= $${globalParamCounter + 1}`;
+      globalStatsParams.push(today);
+      globalParamCounter += 1;
     }
 
     if (genreId) {
@@ -544,52 +555,100 @@ export class DiscsService {
 
     const topRatedDiscs = await this.discRepository.query(query, params);
 
+    // --- Parametros de filtrado para Top Users y Totales ---
+    let statsDateCondition = '';
+    const statsParams: any[] = [];
+    if (statsDateRange && statsDateRange.length === 2) {
+      const [startDate, endDate] = statsDateRange;
+      statsDateCondition = ' AND d."releaseDate" BETWEEN $1 AND $2';
+      statsParams.push(new Date(startDate));
+      statsParams.push(new Date(endDate));
+    }
+
     // --- Otras estadísticas: total de discos y total de votos ---
-    const totalDiscs = await this.discRepository.count();
-    const totalVotesResult = await this.discRepository
-      .createQueryBuilder('disc')
-      .leftJoin('disc.rates', 'rates')
-      .select('COUNT(*)', 'totalVotes')
-      .where('rates.rate IS NOT NULL')
-      .getRawOne();
-    const totalVotes = parseInt(totalVotesResult.totalVotes, 10) || 0;
+    let totalDiscs = 0;
+    let totalVotes = 0;
+
+    if (statsDateRange && statsDateRange.length === 2) {
+      const [startDate, endDate] = statsDateRange;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      totalDiscs = await this.discRepository
+        .createQueryBuilder('disc')
+        .where('disc.releaseDate BETWEEN :start AND :end', { start, end })
+        .getCount();
+
+      const totalVotesResult = await this.discRepository
+        .createQueryBuilder('disc')
+        .leftJoin('disc.rates', 'rates')
+        .select('COUNT(*)', 'totalVotes')
+        .where('rates.rate IS NOT NULL')
+        .andWhere('disc.releaseDate BETWEEN :start AND :end', { start, end })
+        .getRawOne();
+      totalVotes = parseInt(totalVotesResult.totalVotes, 10) || 0;
+    } else {
+      totalDiscs = await this.discRepository.count();
+      const totalVotesResult = await this.discRepository
+        .createQueryBuilder('disc')
+        .leftJoin('disc.rates', 'rates')
+        .select('COUNT(*)', 'totalVotes')
+        .where('rates.rate IS NOT NULL')
+        .getRawOne();
+      totalVotes = parseInt(totalVotesResult.totalVotes, 10) || 0;
+    }
+
 
     // --- Consulta para obtener los top usuarios por cantidad de rates ---
     const topUsersByRatesQuery = `
       SELECT u.id AS "userId", u.username, COUNT(r.id) AS "rateCount"
       FROM rate r
       JOIN "users" u ON u.id = r."userId"
-      WHERE r.rate IS NOT NULL
+      JOIN "disc" d ON d.id = r."discId"
+      WHERE r.rate IS NOT NULL${statsDateCondition}
       GROUP BY u.id, u.username
       ORDER BY "rateCount" DESC
       LIMIT 3;
     `;
     const topUsersByRates =
-      await this.discRepository.query(topUsersByRatesQuery);
+      await this.discRepository.query(topUsersByRatesQuery, statsParams);
 
     // --- Consulta para obtener los top usuarios por cover ---
     const topUsersByCoverQuery = `
       SELECT u.id AS "userId", u.username, COUNT(r.id) AS "coverCount"
       FROM rate r
       JOIN "users" u ON u.id = r."userId"
-      WHERE r.cover IS NOT NULL
+      JOIN "disc" d ON d.id = r."discId"
+      WHERE r.cover IS NOT NULL${statsDateCondition}
       GROUP BY u.id, u.username
       ORDER BY "coverCount" DESC
       LIMIT 3;
     `;
     const topUsersByCover =
-      await this.discRepository.query(topUsersByCoverQuery);
+      await this.discRepository.query(topUsersByCoverQuery, statsParams);
+
+    // --- Parametros de filtrado para Distribución ---
+    let distributionDateCondition = '';
+    const distributionParams: any[] = [];
+    if (distributionDateRange && distributionDateRange.length === 2) {
+      const [startDate, endDate] = distributionDateRange;
+      distributionDateCondition = ' AND d."releaseDate" BETWEEN $1 AND $2';
+      distributionParams.push(new Date(startDate));
+      distributionParams.push(new Date(endDate));
+    }
 
     // --- Consulta: Distribución de ratings ---
     const ratingDistributionQuery = `
       SELECT r.rate AS "rateValue", COUNT(*) AS "count"
       FROM rate r
-      WHERE r.rate IS NOT NULL
+      JOIN "disc" d ON d.id = r."discId"
+      WHERE r.rate IS NOT NULL${distributionDateCondition}
       GROUP BY r.rate
       ORDER BY r.rate;
     `;
     const ratingDistributionResult = await this.discRepository.query(
       ratingDistributionQuery,
+      distributionParams
     );
     const ratingDistribution = ratingDistributionResult.map((row: any) => ({
       rate: parseFloat(row.rateValue),

@@ -31,7 +31,7 @@ export class ContentsService {
   ) { }
 
   async create(createContentDto: CreateContentDto): Promise<Content> {
-    const { authorId, publicationDate, closeDate, reunionId, ...rest } = createContentDto;
+    const { authorId, publicationDate, closeDate, listDate, reunionId, ...rest } = createContentDto;
 
     // Verify user exists
     const author = await this.userRepo.findOne({ where: { id: authorId } });
@@ -80,6 +80,7 @@ export class ContentsService {
       ...rest,
       publicationDate: createContentDto.publicationDate ? new Date(createContentDto.publicationDate) : undefined,
       closeDate: closeDate ? new Date(closeDate) : undefined,
+      listDate: listDate ? new Date(listDate) : undefined,
       author,
       reunionId,
       spotify: (rest as any).spotifyId ? { id: (rest as any).spotifyId } : undefined,
@@ -163,22 +164,15 @@ export class ContentsService {
 
     // Auto-create Weekly List if type is RADAR or BEST
     if (savedContent.type === ContentType.RADAR) {
-      const list = await this.listsService.createWeeklyList(savedContent.publicationDate);
+      const list = await this.listsService.createWeeklyList(savedContent.publicationDate, savedContent.listDate);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     } else if (savedContent.type === ContentType.BEST) {
-      const list = await this.listsService.createMonthlyList(savedContent.publicationDate);
+      const list = await this.listsService.createMonthlyList(savedContent.publicationDate, savedContent.listDate);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     } else if (savedContent.type === ContentType.VIDEO) {
-      const list = await this.listsService.createVideoList(savedContent.publicationDate);
-      savedContent.list = list;
-      await this.contentRepo.save(savedContent);
-    }
-
-    // Auto-create Video List if type is VIDEO
-    if (savedContent.type === ContentType.VIDEO) {
-      const list = await this.listsService.createVideoList(savedContent.publicationDate);
+      const list = await this.listsService.createVideoList(savedContent.publicationDate, savedContent.listDate, savedContent.name);
       savedContent.list = list;
       await this.contentRepo.save(savedContent);
     }
@@ -209,7 +203,7 @@ export class ContentsService {
   async update(id: string, updateContentDto: UpdateContentDto): Promise<Content> {
     const content = await this.findOne(id);
 
-    const { authorId, publicationDate, closeDate, reunionId, ...rest } = updateContentDto;
+    const { authorId, publicationDate, closeDate, listDate, reunionId, ...rest } = updateContentDto;
 
     // Update author if provided
     if (authorId !== undefined) {
@@ -256,6 +250,16 @@ export class ContentsService {
       }
     }
 
+    if (listDate !== undefined) {
+      if ((listDate as unknown) instanceof Date) {
+        content.listDate = listDate as unknown as Date;
+      } else {
+        content.listDate = listDate && typeof listDate === 'string' && listDate.trim() !== ''
+          ? new Date(listDate)
+          : null;
+      }
+    }
+
     const savedContent = await this.contentRepo.save(content);
 
     // Sync with List (RADAR, BEST, VIDEO)
@@ -268,15 +272,27 @@ export class ContentsService {
       if (contentWithList && contentWithList.list) {
         let listChanged = false;
 
-        // Sync publicationDate -> listDate
+        // Sync publicationDate -> releaseDate (NOT listDate - listDate is independent)
         if (contentWithList.publicationDate) {
           const contentDate = new Date(contentWithList.publicationDate);
-          const listDate = contentWithList.list.listDate ? new Date(contentWithList.list.listDate) : null;
+          const releaseDate = contentWithList.list.releaseDate ? new Date(contentWithList.list.releaseDate) : null;
 
-          if (!listDate || listDate.getTime() !== contentDate.getTime()) {
-            contentWithList.list.listDate = contentDate;
+          if (!releaseDate || releaseDate.getTime() !== contentDate.getTime()) {
             contentWithList.list.releaseDate = contentDate;
             listChanged = true;
+          }
+        }
+
+        // Sync content.listDate -> list.listDate (for RADAR, BEST, and VIDEO)
+        if (savedContent.type === ContentType.RADAR || savedContent.type === ContentType.BEST || savedContent.type === ContentType.VIDEO) {
+          if (contentWithList.listDate) {
+            const contentListDate = new Date(contentWithList.listDate);
+            const listListDate = contentWithList.list.listDate ? new Date(contentWithList.list.listDate) : null;
+
+            if (!listListDate || listListDate.getTime() !== contentListDate.getTime()) {
+              contentWithList.list.listDate = contentListDate;
+              listChanged = true;
+            }
           }
         }
 
