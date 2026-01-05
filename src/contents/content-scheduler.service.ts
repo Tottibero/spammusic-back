@@ -128,6 +128,13 @@ export class ContentSchedulerService {
         this.logger.log('Starting weekly content creation job...');
 
         const now = new Date();
+        // Guard: Only run on Mondays (Day 1)
+        // This is important because Heroku Scheduler only runs Daily, so we need to skip other days.
+        if (now.getDay() !== 1) {
+            this.logger.log('Today is not Monday. Skipping weekly content creation.');
+            return;
+        }
+
         const author = await this.userRepo.findOne({ select: ['id'], where: {}, order: { id: 'ASC' } }); // Obtener un usuario por defecto (el primero)
 
         if (!author) {
