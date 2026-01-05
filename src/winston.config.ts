@@ -46,6 +46,15 @@ export const winstonConfig = {
             },
             format: winston.format.combine(
                 winston.format.timestamp(),
+                winston.format((info) => {
+                    if (info && typeof info.level === 'string') {
+                        info['severity'] = info.level.toUpperCase();
+                    } else {
+                        // Fallback or skip
+                        info['severity'] = 'INFO';
+                    }
+                    return info;
+                })(),
                 winston.format.json(),
             ),
         }),

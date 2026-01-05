@@ -37,7 +37,7 @@ export class ContentSchedulerService {
             const discsToUpdate = await this.discRepo.createQueryBuilder('disc')
                 .leftJoinAndSelect('disc.artist', 'artist')
                 .leftJoinAndSelect('disc.genre', 'genre')
-                .where('disc.releaseDate < :today', { today })
+                .where('disc.releaseDate <= :today', { today })
                 .andWhere('(disc.link IS NULL OR disc.link = :empty OR disc.link = :notFound OR disc.link = :error)', {
                     empty: '',
                     notFound: 'No se encontró el álbum',
@@ -63,8 +63,10 @@ export class ContentSchedulerService {
             for (const disc of discsToUpdate) {
                 try {
                     const query = encodeURIComponent(`album:${disc.name} artist:${disc.artist.name}`);
+                    const url = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
+                    this.logger.log(`Spotify Search URL: ${url}`);
                     const response = await fetch(
-                        `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`,
+                        url,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -82,9 +84,9 @@ export class ContentSchedulerService {
 
                         await this.discRepo.save(disc);
                         updatedCount++;
-                        this.logger.log(`Updated Spotify link for: ${disc.name} - ${disc.artist.name}`);
+                        this.logger.log(`Updated Spotify link for: ${disc.artist.name} - ${disc.name}`);
                     } else {
-                        this.logger.log(`Album not found on Spotify. Trying Bandcamp for: ${disc.name} - ${disc.artist.name}`);
+                        this.logger.log(`Album not found on Spotify. Trying Bandcamp for: ${disc.artist.name} - ${disc.name}`);
 
                         // Fallback to Bandcamp
                         const bandcampResult = await this.searchBandcamp(disc.artist.name, disc.name);
@@ -208,7 +210,14 @@ export class ContentSchedulerService {
     private async searchBandcamp(artist: string, album: string): Promise<{ link: string, image: string | null } | null> {
         try {
             const query = encodeURIComponent(`${artist} ${album}`);
-            const response = await fetch(`https://bandcamp.com/search?q=${query}`);
+            const url = `https://bandcamp.com/search?q=${query}&item_type=a`;
+            this.logger.log(`Bandcamp Search URL: ${url}`);
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                }
+            });
 
             if (!response.ok) {
                 this.logger.warn(`Bandcamp search failed: ${response.statusText}`);
@@ -219,7 +228,7 @@ export class ContentSchedulerService {
             const $ = cheerio.load(html);
 
             // Find the first album result
-            const firstResult = $('.searchresult.album').first();
+            const firstResult = $('ul.result-items li.searchresult').first();
 
             if (firstResult.length > 0) {
                 const link = firstResult.find('.itemurl').text().trim(); // itemurl class usually contains the cleanup url text, but usually href is better
