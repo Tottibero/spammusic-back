@@ -62,7 +62,10 @@ export class ContentSchedulerService {
 
             for (const disc of discsToUpdate) {
                 try {
-                    const query = encodeURIComponent(`album:${disc.name} artist:${disc.artist.name}`);
+                    const normalizedArtist = this.normalizeString(disc.artist.name);
+                    const normalizedAlbum = this.normalizeString(disc.name);
+                    // Use normalized strings for strict search too, or at least for handling quotes
+                    const query = encodeURIComponent(`album:${normalizedAlbum} artist:${normalizedArtist}`);
                     const url = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
                     this.logger.log(`Spotify Search URL: ${url}`);
                     const response = await fetch(
@@ -86,23 +89,47 @@ export class ContentSchedulerService {
                         updatedCount++;
                         this.logger.log(`Updated Spotify link for: ${disc.artist.name} - ${disc.name}`);
                     } else {
-                        this.logger.log(`Album not found on Spotify. Trying Bandcamp for: ${disc.artist.name} - ${disc.name}`);
+                        // Fallback: Try loose search (just name + artist)
+                        this.logger.log(`Strict search failed. Trying loose search for: ${disc.name} - ${disc.artist.name}`);
+                        const looseQuery = encodeURIComponent(`${normalizedArtist} ${normalizedAlbum}`);
+                        const looseResponse = await fetch(
+                            `https://api.spotify.com/v1/search?q=${looseQuery}&type=album&limit=1`,
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                },
+                            }
+                        );
+                        const looseData = await looseResponse.json();
 
-                        // Fallback to Bandcamp
-                        const bandcampResult = await this.searchBandcamp(disc.artist.name, disc.name);
-
-                        if (bandcampResult) {
-                            disc.link = bandcampResult.link;
-                            disc.image = bandcampResult.image || disc.image; // Keep existing image if bandcamp doesn't have one? Or prefer bandcamp?
+                        if (looseData.albums?.items?.length > 0) {
+                            const album = looseData.albums.items[0];
+                            disc.link = album.external_urls.spotify;
+                            disc.image = album.images?.[0]?.url || null;
                             disc.verified = true;
 
                             await this.discRepo.save(disc);
                             updatedCount++;
-                            this.logger.log(`Updated Bandcamp link for: ${disc.name} - ${disc.artist.name}`);
+                            this.logger.log(`Updated Spotify link (loose search) for: ${disc.name} - ${disc.artist.name}`);
                         } else {
-                            if (disc.link !== 'No se encontró el álbum') {
-                                disc.link = 'No se encontró el álbum';
+                            this.logger.log(`Album not found on Spotify (strict & loose). Trying Bandcamp for: ${disc.artist.name} - ${disc.name}`);
+
+                            // Fallback to Bandcamp
+                            const bandcampResult = await this.searchBandcamp(disc.artist.name, disc.name);
+
+                            if (bandcampResult) {
+                                disc.link = bandcampResult.link;
+                                disc.image = bandcampResult.image || disc.image; // Keep existing image if bandcamp doesn't have one? Or prefer bandcamp?
+                                disc.verified = true;
+
                                 await this.discRepo.save(disc);
+                                updatedCount++;
+                                this.logger.log(`Updated Bandcamp link for: ${disc.name} - ${disc.artist.name}`);
+                            } else {
+                                if (disc.link !== 'No se encontró el álbum') {
+                                    disc.link = 'No se encontró el álbum';
+                                    await this.discRepo.save(disc);
+                                }
                             }
                         }
                     }
@@ -205,6 +232,14 @@ export class ContentSchedulerService {
         }
 
         this.logger.log('Weekly content creation job finished.');
+    }
+
+    private normalizeString(str: string): string {
+        return str
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/’/g, "'") // Handle smart quotes
+            .trim();
     }
 
     private async searchBandcamp(artist: string, album: string): Promise<{ link: string, image: string | null } | null> {
