@@ -406,6 +406,51 @@ export class ContentsService {
       }
     }
 
+    // Sync with Reunion (Content.publicationDate -> Reunion.date)
+    if (savedContent.type === ContentType.REUNION || savedContent.reunionId) {
+      // Ensure we have the relation loaded or use reunionId
+      let reunionIdToUpdate = savedContent.reunionId;
+
+      if (!reunionIdToUpdate && savedContent.reunion) {
+        reunionIdToUpdate = savedContent.reunion.id;
+      }
+
+      // If we don't have id but know it should exist (rare case if relations not loaded), fetch it
+      if (!reunionIdToUpdate && (savedContent.type === ContentType.REUNION)) {
+        const contentWithReunion = await this.contentRepo.findOne({ where: { id: savedContent.id }, relations: ['reunion'] });
+        if (contentWithReunion && contentWithReunion.reunion) {
+          reunionIdToUpdate = contentWithReunion.reunion.id;
+        }
+      }
+
+      if (reunionIdToUpdate && (savedContent.publicationDate || savedContent.name)) {
+        const reunionEntity = await this.reunionRepo.findOne({ where: { id: reunionIdToUpdate } });
+
+        if (reunionEntity) {
+          let reunionChanged = false;
+
+          if (savedContent.publicationDate) {
+            const contentDate = new Date(savedContent.publicationDate);
+            const reunionDate = reunionEntity.date ? new Date(reunionEntity.date) : null;
+
+            if (!reunionDate || reunionDate.getTime() !== contentDate.getTime()) {
+              reunionEntity.date = contentDate;
+              reunionChanged = true;
+            }
+          }
+
+          if (savedContent.name && reunionEntity.title !== savedContent.name) {
+            reunionEntity.title = savedContent.name;
+            reunionChanged = true;
+          }
+
+          if (reunionChanged) {
+            await this.reunionRepo.save(reunionEntity);
+          }
+        }
+      }
+    }
+
     return savedContent;
   }
 
