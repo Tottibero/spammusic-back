@@ -322,7 +322,7 @@ export class ListsService {
     });
   }
 
-  async createVideoList(releaseDate?: Date, listDate?: Date, listName?: string) {
+  async createVideoList(releaseDate?: Date, listDate?: Date, listName?: string, closeDate?: Date) {
     let targetReleaseDate: Date;
 
     if (releaseDate) {
@@ -363,6 +363,7 @@ export class ListsService {
         status: ListStatus.NEW,
         listDate: targetListDate,
         releaseDate: targetReleaseDate,
+        closeDate: closeDate,
       });
 
       await this.listRepository.save(list);
@@ -373,7 +374,7 @@ export class ListsService {
     }
   }
 
-  async createWeeklyList(releaseDate?: Date, listDate?: Date) {
+  async createWeeklyList(releaseDate?: Date, listDate?: Date, closeDate?: Date) {
     let targetReleaseDate: Date;
 
     if (releaseDate) {
@@ -418,6 +419,7 @@ export class ListsService {
         status: ListStatus.NEW,
         listDate: targetListDate,
         releaseDate: targetReleaseDate,
+        closeDate: closeDate,
       });
 
       await this.listRepository.save(list);
@@ -428,7 +430,7 @@ export class ListsService {
     }
   }
 
-  async createMonthlyList(releaseDate?: Date, listDate?: Date) {
+  async createMonthlyList(releaseDate?: Date, listDate?: Date, closeDate?: Date) {
     let targetReleaseDate: Date;
 
     if (releaseDate) {
@@ -468,6 +470,7 @@ export class ListsService {
         status: ListStatus.NEW,
         listDate: targetListDate,
         releaseDate: targetReleaseDate,
+        closeDate: closeDate,
       });
 
       await this.listRepository.save(list);
