@@ -327,36 +327,45 @@ export class ListsService {
 
     if (releaseDate) {
       targetReleaseDate = new Date(releaseDate);
+      // If releaseDate provided, we trust it (including time)
+      // Normalizing to 1st of month ONLY if not provided? 
+      // User request implies respecting exact time. If we force 1st of month we change date.
+      // Assuming Video lists act like monthly buckets but if specific date given, maybe we should keep it?
+      // Logic below uses targetListDate for naming.
+
+      // If we seek to maintain "Video List is usually 1st of month" logic but allow time:
+      // But "las fechas en el content se tienen que enviar con la hora" implies preserving what was sent.
+      // So I will NOT force setDate(1) if releaseDate is provided, and NOT force setHours(0).
     } else {
       targetReleaseDate = new Date(); // Use current date if none provided
+      // Default behavior: 1st of month, 00:00
+      targetReleaseDate.setDate(1);
+      targetReleaseDate.setHours(0, 0, 0, 0);
     }
-
-    // Set to 1st of month to normalize if it represents a monthly video list
-    targetReleaseDate.setDate(1);
-    targetReleaseDate.setHours(0, 0, 0, 0);
 
     // Determine targetListDate
     let targetListDate: Date;
     if (listDate) {
       targetListDate = new Date(listDate);
+      // Trust provided listDate
     } else {
       targetListDate = new Date(targetReleaseDate);
+      // If derived from default targetReleaseDate, it's already normalized.
+      // If derived from provided releaseDate, we might want to normalize it for naming?
+      // The naming logic uses targetListDate.getMonth().
+      // Let's ensure strict consistency with provided values.
     }
-    // Also normalize to 1st of month for video lists? Assuming yes based on logic.
-    targetListDate.setDate(1);
-    targetListDate.setHours(0, 0, 0, 0);
 
+    // Naming logic
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
     const currentMonthName = monthNames[targetListDate.getMonth()];
-    const name = listName || `Videos ${currentMonthName}`; // Use provided name or default naming convention
+    const name = listName || `Videos ${currentMonthName}`;
 
     try {
-      // Check if exists first? Or rely on unique constraint? Lists usually don't have unique name constraint but might be good to check.
-      // But for now, just create.
       const list = this.listRepository.create({
         name,
         type: ListType.VIDEO,
@@ -379,6 +388,7 @@ export class ListsService {
 
     if (releaseDate) {
       targetReleaseDate = new Date(releaseDate);
+      // Trust provided releaseDate
     } else {
       const now = new Date();
       // Calcular el próximo lunes
@@ -387,18 +397,18 @@ export class ListsService {
 
       targetReleaseDate = new Date(now);
       targetReleaseDate.setDate(now.getDate() + daysUntilMonday);
+      targetReleaseDate.setHours(0, 0, 0, 0); // Default logic keeps 00:00
     }
 
-    targetReleaseDate.setHours(0, 0, 0, 0);
-
-    // Determine targetListDate (for naming and listDate field)
+    // Determine targetListDate
     let targetListDate: Date;
     if (listDate) {
       targetListDate = new Date(listDate);
+      // Trust provided listDate
     } else {
       targetListDate = new Date(targetReleaseDate);
+      targetListDate.setHours(0, 0, 0, 0); // Default logic
     }
-    targetListDate.setHours(0, 0, 0, 0);
 
 
     const monthNames = [
@@ -435,22 +445,23 @@ export class ListsService {
 
     if (releaseDate) {
       targetReleaseDate = new Date(releaseDate);
+      // Trust provided releaseDate
     } else {
       const now = new Date();
       // Default to the first day of the next month
       targetReleaseDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      targetReleaseDate.setHours(0, 0, 0, 0); // Default logic
     }
-
-    targetReleaseDate.setHours(0, 0, 0, 0);
 
     // Determine targetListDate
     let targetListDate: Date;
     if (listDate) {
       targetListDate = new Date(listDate);
+      // Trust provided listDate
     } else {
       targetListDate = new Date(targetReleaseDate);
+      targetListDate.setHours(0, 0, 0, 0); // Default logic
     }
-    targetListDate.setHours(0, 0, 0, 0);
 
     const monthNames = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",

@@ -39,13 +39,13 @@ export class List {
   @Column({ type: 'boolean', default: false, nullable: true })
   free: boolean;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   listDate?: Date;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   releaseDate?: Date;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   closeDate?: Date;
 
 

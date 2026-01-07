@@ -39,13 +39,13 @@ export class Content {
     @Column('text', { nullable: true })
     notes?: string;
 
-    @Column({ type: 'date', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     publicationDate?: Date;
 
-    @Column({ type: 'date', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     closeDate?: Date;
 
-    @Column({ type: 'date', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     listDate?: Date;
 
     @ManyToOne(() => User, { eager: true })
