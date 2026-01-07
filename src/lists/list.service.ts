@@ -8,7 +8,7 @@ import {
   forwardRef
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Between, In, LessThan, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { List, ListType, ListStatus } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -257,7 +257,7 @@ export class ListsService {
     const lists = await this.listRepository.find({
       where: {
         type: ListType.WEEK,
-        listDate: MoreThanOrEqual(today),
+        releaseDate: MoreThanOrEqual(today),
       },
       order: {
         listDate: 'ASC',
@@ -272,10 +272,14 @@ export class ListsService {
     const endDate = new Date(year, month, 0);
     endDate.setHours(23, 59, 59, 999);
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const lists = await this.listRepository.find({
       where: {
         type: ListType.WEEK,
         listDate: Between(startDate, endDate),
+        releaseDate: LessThan(today),
       },
       order: {
         listDate: 'DESC',
