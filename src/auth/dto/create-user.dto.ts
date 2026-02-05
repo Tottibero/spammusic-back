@@ -40,4 +40,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  createdAt?: Date;
 }

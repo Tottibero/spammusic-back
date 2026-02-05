@@ -43,7 +43,7 @@ export class User {
   @Column('text', { nullable: true })
   image: string;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
   @Column('text', { nullable: true })
