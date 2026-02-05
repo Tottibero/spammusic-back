@@ -29,8 +29,30 @@ export class ArticlesService {
             ...createArticleDto,
             updateDate: createArticleDto.updateDate ? new Date(createArticleDto.updateDate) : null,
             user: createArticleDto.userId ? { id: createArticleDto.userId } : undefined,
+            editor: createArticleDto.editorId ? { id: createArticleDto.editorId } : undefined,
         });
-        return this.repo.save(entity);
+        const savedArticle = await this.repo.save(entity);
+
+        // Auto-create Content
+        try {
+            let authorId = createArticleDto.userId;
+            if (!authorId) {
+                authorId = await this.contentsService.getDefaultAuthorId();
+            }
+
+            await this.contentsService.create({
+                name: savedArticle.name,
+                type: ContentType.ARTICLE,
+                authorId: authorId,
+                articleId: savedArticle.id,
+                publicationDate: savedArticle.status === ArticleStatus.PUBLISHED ? savedArticle.updateDate?.toISOString() : undefined,
+            } as any);
+        } catch (error) {
+            console.error('Error creating content for Article:', error);
+            // Non-blocking error for Article creation, but good to log
+        }
+
+        return this.findOne(savedArticle.id);
     }
 
     async findAll(params: FindArticleParams = {}): Promise<Article[]> {
@@ -55,14 +77,14 @@ export class ArticlesService {
             order: { updatedAt: 'DESC' },
             take: Math.min(Math.max(0, limit), 200),
             skip: Math.max(0, offset),
-            relations: ['user'],
+            relations: ['user', 'content', 'editor'],
         });
     }
 
     async findOne(id: string): Promise<Article> {
         const entity = await this.repo.findOne({
             where: { id },
-            relations: ['user'],
+            relations: ['user', 'content', 'editor'],
         });
         if (!entity) throw new NotFoundException('Article not found');
         return entity;
@@ -87,6 +109,10 @@ export class ArticlesService {
         // Handle User Assignment
         if (updateArticleDto.userId) {
             entity.user = { id: updateArticleDto.userId } as any;
+        }
+
+        if (updateArticleDto.editorId) {
+            entity.editor = { id: updateArticleDto.editorId } as any;
         }
 
         // Logic for State Transitions

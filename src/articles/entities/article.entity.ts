@@ -49,4 +49,7 @@ export class Article {
 
     @ManyToOne(() => User, (user) => user.articles, { nullable: true })
     user: User;
+
+    @ManyToOne(() => User, { nullable: true })
+    editor: User;
 }

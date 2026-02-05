@@ -85,6 +85,7 @@ export class ContentsService {
       reunionId,
       spotify: (rest as any).spotifyId ? { id: (rest as any).spotifyId } : undefined,
       article: (rest as any).articleId ? { id: (rest as any).articleId } : undefined,
+      ready: createContentDto.publicationDate ? false : rest.ready,
     });
 
     // Auto-create Spotify entity if type is SPOTIFY and no spotifyId provided
@@ -180,8 +181,13 @@ export class ContentsService {
     return savedContent;
   }
 
-  async findAll(): Promise<Content[]> {
+  async findAll(ready?: boolean): Promise<Content[]> {
+    const where: any = {};
+    if (ready !== undefined) {
+      where.ready = ready;
+    }
     return this.contentRepo.find({
+      where,
       relations: ['author', 'list', 'list.asignations', 'spotify', 'article'],
       order: { publicationDate: 'DESC' },
     });
@@ -233,10 +239,15 @@ export class ContentsService {
     if (publicationDate !== undefined) {
       if ((publicationDate as unknown) instanceof Date) {
         content.publicationDate = publicationDate as unknown as Date;
+        content.ready = false;
       } else {
-        content.publicationDate = publicationDate && typeof publicationDate === 'string' && publicationDate.trim() !== ''
+        const newDate = publicationDate && typeof publicationDate === 'string' && publicationDate.trim() !== ''
           ? new Date(publicationDate)
           : null;
+        content.publicationDate = newDate;
+        if (newDate) {
+          content.ready = false;
+        }
       }
     }
 
@@ -389,12 +400,6 @@ export class ContentsService {
 
             if (articleEntity.status !== ArticleStatus.PUBLISHED) {
               articleEntity.status = ArticleStatus.PUBLISHED;
-              articleChanged = true;
-            }
-          } else {
-            // Content Backlog (null date) -> Article READY (or whatever state maps to PARA_PUBLICAR for articles)
-            if (articleEntity.status !== ArticleStatus.READY) {
-              articleEntity.status = ArticleStatus.READY;
               articleChanged = true;
             }
           }

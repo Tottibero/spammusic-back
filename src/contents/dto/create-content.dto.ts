@@ -48,4 +48,7 @@ export class CreateContentDto {
     @IsOptional()
     @IsUUID()
     articleId?: string;
+
+    @IsOptional()
+    ready?: boolean;
 }

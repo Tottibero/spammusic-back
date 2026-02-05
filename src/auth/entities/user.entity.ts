@@ -9,6 +9,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
   Column,
+  CreateDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -41,6 +42,12 @@ export class User {
 
   @Column('text', { nullable: true })
   image: string;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @Column('text', { nullable: true })
+  notes: string;
 
   @OneToMany(() => Rate, (rate) => rate.user, { cascade: true })
   rate: Rate;

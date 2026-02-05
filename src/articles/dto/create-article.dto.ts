@@ -24,4 +24,8 @@ export class CreateArticleDto {
     @IsUUID()
     @IsOptional()
     userId?: string;
+
+    @IsUUID()
+    @IsOptional()
+    editorId?: string;
 }

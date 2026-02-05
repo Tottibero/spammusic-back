@@ -34,8 +34,9 @@ export class ContentsController {
   }
 
   @Get()
-  findAll() {
-    return this.contentsService.findAll();
+  findAll(@Query('ready') ready?: string) {
+    const isReady = ready === 'true' ? true : ready === 'false' ? false : undefined;
+    return this.contentsService.findAll(isReady);
   }
 
   @Get(':id')
