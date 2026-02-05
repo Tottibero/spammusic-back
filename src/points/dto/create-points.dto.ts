@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsObject, IsOptional, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsObject, IsOptional, IsUUID, IsBoolean } from 'class-validator';
 import { Column } from 'typeorm';
 
 export class CreatePointDto {
@@ -14,4 +14,8 @@ export class CreatePointDto {
   @IsNotEmpty()
   @IsUUID('4') // 👈 valida que sea UUID v4
   reunionId: string; // 👈 debe ser string
+
+  @IsOptional()
+  @IsBoolean()
+  done?: boolean;
 }

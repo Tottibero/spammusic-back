@@ -7,6 +7,7 @@ import { User } from 'src/auth/entities/user.entity';
 import { Reunion } from 'src/reunions/entities/reunion.entity';
 import { Spotify } from 'src/spotify/entities/spotify.entity';
 import { Article } from 'src/articles/entities/article.entity';
+import { Disc } from 'src/discs/entities/disc.entity';
 
 import { ListsModule } from 'src/lists/list.module';
 import { PointsModule } from 'src/points/points.module';
@@ -16,7 +17,7 @@ import { ContentSchedulerService } from './content-scheduler.service';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Content, User, Reunion, Spotify, Article]), forwardRef(() => ListsModule), PointsModule],
+  imports: [TypeOrmModule.forFeature([Content, User, Reunion, Spotify, Article, Disc]), forwardRef(() => ListsModule), PointsModule],
   controllers: [ContentsController],
   providers: [ContentsService, ContentSchedulerService],
   exports: [ContentsService],

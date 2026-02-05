@@ -3,9 +3,20 @@ import { ContentsService } from './contents.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { UpdateContentDto } from './dto/update-content.dto';
 
+import { ContentSchedulerService } from './content-scheduler.service';
+
 @Controller('contents')
 export class ContentsController {
-  constructor(private readonly contentsService: ContentsService) { }
+  constructor(
+    private readonly contentsService: ContentsService,
+    private readonly contentSchedulerService: ContentSchedulerService,
+  ) { }
+
+  @Post('trigger-daily-link-update')
+  async triggerDailyLinkUpdate() {
+    await this.contentSchedulerService.checkMissingSpotifyLinks();
+    return { message: 'Daily link update triggered' };
+  }
 
   @Post()
   create(@Body() createContentDto: CreateContentDto) {
