@@ -69,4 +69,7 @@ export class Content {
     @OneToOne(() => Article, (article) => article.content, { nullable: true })
     @JoinColumn()
     article?: Article;
+
+    @Column({ default: false })
+    ready: boolean;
 }
