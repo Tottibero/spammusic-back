@@ -81,7 +81,8 @@ export class AuthService {
   async findAll() {
     try {
       const users = await this.userRepository.find({
-        select: ['id', 'username', 'email', 'roles', 'createdAt', 'notes'], // Ajusta los campos que deseas incluir
+        select: ['id', 'username', 'email', 'roles', 'createdAt', 'notes'],
+        order: { createdAt: 'DESC' },
       });
 
       // Opcional: si no quieres devolver la contraseña u otros datos sensibles
